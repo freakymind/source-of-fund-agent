@@ -176,26 +176,43 @@ export function StageChecklist({
                   <CollapsibleContent>
                     <div className="border-t border-border/50 p-4 space-y-4">
                       {/* Statement Excerpt for this source */}
-                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                        <p className="text-xs font-semibold text-primary mb-2 flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          From Applicant Statement:
-                        </p>
-                        <p className="text-sm text-foreground italic">&quot;{source.statementExcerpt}&quot;</p>
-                        
-                        {source.claimsToVerify && source.claimsToVerify.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-primary/20">
-                            <p className="text-xs font-semibold text-primary mb-2">Claims to Verify:</p>
-                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                              {source.claimsToVerify.map((claim, i) => (
-                                <li key={i} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                                  {claim.claim}
-                                </li>
-                              ))}
-                            </ul>
+                      <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border-l-4 border-primary">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-4 h-4 text-primary" />
                           </div>
-                        )}
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-primary uppercase tracking-wide mb-2">
+                              Statement Excerpt Identified
+                            </p>
+                            <div className="p-3 bg-white/50 rounded border border-primary/20 mb-3">
+                              <p className="text-sm text-foreground leading-relaxed">
+                                &quot;<span className="bg-yellow-200/50 px-0.5">{source.statementExcerpt}</span>&quot;
+                              </p>
+                            </div>
+                            
+                            {source.claimsToVerify && source.claimsToVerify.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs font-bold text-primary uppercase tracking-wide">
+                                  Key Claims Extracted for Verification:
+                                </p>
+                                <div className="grid gap-2">
+                                  {source.claimsToVerify.map((claim, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2 bg-white/30 rounded border border-primary/10">
+                                      <Badge variant="outline" className="text-xs border-primary/30 text-primary capitalize">
+                                        {claim.verificationType}
+                                      </Badge>
+                                      <span className="text-sm text-foreground">{claim.claim}</span>
+                                      <span className="ml-auto text-xs font-mono bg-primary/10 px-2 py-0.5 rounded text-primary">
+                                        {claim.extractedValue}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       {source.requiredDocuments.map((doc) => (

@@ -15,6 +15,7 @@ import {
   User,
   RefreshCw,
   Calculator,
+  FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -264,9 +265,41 @@ function ValidationResultCard({
           </div>
         )}
 
-        {/* Summary */}
-        <div className="p-3 bg-primary/5 rounded border border-primary/20">
-          <p className="text-sm text-foreground">{result.summary}</p>
+        {/* Written Summary */}
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+          <h4 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Agent Written Summary
+          </h4>
+          <p className="text-sm text-foreground leading-relaxed">{result.summary}</p>
+          
+          {/* Detailed check explanation */}
+          <div className="mt-3 pt-3 border-t border-primary/20">
+            <p className="text-xs font-semibold text-primary mb-2 uppercase tracking-wide">Checks Performed:</p>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              {result.matches.map((match, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className={cn(
+                    "w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0",
+                    match.status === "match" && "bg-success",
+                    match.status === "partial" && "bg-warning",
+                    match.status === "mismatch" && "bg-destructive"
+                  )} />
+                  <span>
+                    Verified &quot;{match.statementClaim}&quot; against document - 
+                    <span className={cn(
+                      "font-medium ml-1",
+                      match.status === "match" && "text-success",
+                      match.status === "partial" && "text-warning",
+                      match.status === "mismatch" && "text-destructive"
+                    )}>
+                      {match.status === "match" ? "Confirmed" : match.status === "partial" ? "Partially Matched" : "Discrepancy Found"}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </CardContent>
     </Card>
