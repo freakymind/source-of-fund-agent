@@ -60,26 +60,33 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
   return (
     <div className="space-y-6">
       {/* Report Header */}
-      <Card className="border-primary/20 overflow-hidden">
-        <div className="bg-gradient-to-r from-primary to-primary/80 p-6 text-primary-foreground">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center">
-                <ClipboardList className="w-7 h-7" />
+      <Card className="border-2 border-primary/30 overflow-hidden shadow-lg">
+        <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 text-primary-foreground relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center shadow-lg">
+                <ClipboardList className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Source of Funds Audit Report</h2>
-                <p className="text-primary-foreground/80">
-                  Report ID: {report.id}
+                <p className="text-primary-foreground/70 text-sm font-medium uppercase tracking-wider mb-1">
+                  Official Compliance Document
+                </p>
+                <h2 className="text-3xl font-bold">Source of Funds Audit Report</h2>
+                <p className="text-primary-foreground/80 mt-1">
+                  Report ID: <span className="font-mono bg-white/10 px-2 py-0.5 rounded">{report.id}</span>
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={onExportPDF}
-                className="bg-white/20 hover:bg-white/30 text-white border-0"
+                className="bg-white/20 hover:bg-white/30 text-white border-0 shadow-md"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export PDF
@@ -88,7 +95,7 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                 variant="secondary"
                 size="sm"
                 onClick={onPrint}
-                className="bg-white/20 hover:bg-white/30 text-white border-0"
+                className="bg-white/20 hover:bg-white/30 text-white border-0 shadow-md"
               >
                 <Printer className="w-4 h-4 mr-2" />
                 Print
@@ -97,46 +104,69 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
           </div>
         </div>
 
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-8 space-y-8">
           {/* Status Banner */}
-          <div className={cn("p-4 rounded-lg flex items-center gap-3", status.color)}>
-            <StatusIcon className="w-6 h-6" />
-            <div>
-              <p className="font-bold">{status.label}</p>
+          <div className={cn(
+            "p-5 rounded-xl flex items-center gap-4 shadow-sm",
+            status.color,
+            report.overallStatus === "approved" && "ring-2 ring-success/30",
+            report.overallStatus === "flagged" && "ring-2 ring-destructive/30",
+            report.overallStatus === "pending" && "ring-2 ring-warning/30"
+          )}>
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+              <StatusIcon className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">{status.label}</p>
               <p className="text-sm opacity-90">
                 Generated on {formatDate(report.generatedAt)}
               </p>
             </div>
+            {report.overallStatus === "approved" && (
+              <Badge className="bg-white/20 text-white text-sm px-4 py-1">
+                Ready for Approval
+              </Badge>
+            )}
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card className="p-4 bg-accent/30">
-              <p className="text-sm text-muted-foreground mb-1">Applicant</p>
-              <p className="font-semibold text-foreground">{report.applicantName}</p>
+          <div className="grid grid-cols-4 gap-5">
+            <Card className="p-5 bg-gradient-to-br from-accent/50 to-accent/20 border-2 border-border/50 shadow-sm">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">Applicant</p>
+              <p className="font-bold text-lg text-foreground">{report.applicantName}</p>
             </Card>
-            <Card className="p-4 bg-accent/30">
-              <p className="text-sm text-muted-foreground mb-1">Total Funds Verified</p>
-              <p className="font-semibold text-foreground">
+            <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 shadow-sm">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">Total Funds Verified</p>
+              <p className="font-bold text-xl text-primary">
                 {formatCurrency(report.totalFundsVerified)}
               </p>
             </Card>
-            <Card className="p-4 bg-accent/30">
-              <p className="text-sm text-muted-foreground mb-1">Documents Reviewed</p>
-              <p className="font-semibold text-foreground">
+            <Card className="p-5 bg-gradient-to-br from-accent/50 to-accent/20 border-2 border-border/50 shadow-sm">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">Documents Reviewed</p>
+              <p className="font-bold text-xl text-foreground">
                 {report.validationSummary.totalDocuments}
               </p>
             </Card>
-            <Card className="p-4 bg-accent/30">
-              <p className="text-sm text-muted-foreground mb-1">Plausibility Score</p>
+            <Card className="p-5 bg-gradient-to-br from-accent/50 to-accent/20 border-2 border-border/50 shadow-sm">
+              <p className="text-sm text-muted-foreground mb-2 font-medium">Plausibility Score</p>
               <div className="flex items-center gap-2">
-                <TrendingUp
-                  className={cn(
-                    "w-4 h-4",
-                    report.plausibilityScore >= 80 ? "text-success" : "text-warning"
-                  )}
-                />
-                <p className="font-semibold text-foreground">{report.plausibilityScore}%</p>
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center",
+                  report.plausibilityScore >= 80 ? "bg-success/20" : "bg-warning/20"
+                )}>
+                  <TrendingUp
+                    className={cn(
+                      "w-5 h-5",
+                      report.plausibilityScore >= 80 ? "text-success" : "text-warning"
+                    )}
+                  />
+                </div>
+                <p className={cn(
+                  "font-bold text-xl",
+                  report.plausibilityScore >= 80 ? "text-success" : "text-warning"
+                )}>
+                  {report.plausibilityScore}%
+                </p>
               </div>
             </Card>
           </div>
@@ -202,38 +232,90 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
           </Card>
 
           {/* Validation Summary */}
-          <Card className="p-4">
+          <Card className="p-4 border-2 border-primary/20">
             <h3 className="font-semibold mb-4 flex items-center gap-2 text-foreground">
               <CheckCircle2 className="w-5 h-5 text-primary" />
               Validation Summary
             </h3>
             <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-accent/30 rounded">
-                <p className="text-2xl font-bold text-foreground">
+              <div className="text-center p-4 bg-accent/30 rounded-lg border border-border/50">
+                <p className="text-3xl font-bold text-foreground">
                   {report.validationSummary.totalDocuments}
                 </p>
-                <p className="text-xs text-muted-foreground">Total Documents</p>
+                <p className="text-sm text-muted-foreground mt-1">Total Documents</p>
               </div>
-              <div className="text-center p-3 bg-success/10 rounded">
-                <p className="text-2xl font-bold text-success">
+              <div className="text-center p-4 bg-success/10 rounded-lg border border-success/30">
+                <p className="text-3xl font-bold text-success">
                   {report.validationSummary.validatedDocuments}
                 </p>
-                <p className="text-xs text-muted-foreground">Validated</p>
+                <p className="text-sm text-muted-foreground mt-1">Validated</p>
               </div>
-              <div className="text-center p-3 bg-destructive/10 rounded">
-                <p className="text-2xl font-bold text-destructive">
+              <div className="text-center p-4 bg-destructive/10 rounded-lg border border-destructive/30">
+                <p className="text-3xl font-bold text-destructive">
                   {report.validationSummary.flaggedDocuments}
                 </p>
-                <p className="text-xs text-muted-foreground">Flagged</p>
+                <p className="text-sm text-muted-foreground mt-1">Flagged</p>
               </div>
-              <div className="text-center p-3 bg-warning/10 rounded">
-                <p className="text-2xl font-bold text-warning">
+              <div className="text-center p-4 bg-warning/10 rounded-lg border border-warning/30">
+                <p className="text-3xl font-bold text-warning">
                   {report.validationSummary.pendingDocuments}
                 </p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground mt-1">Pending</p>
               </div>
             </div>
           </Card>
+
+          {/* Missing Documents Alert Section */}
+          {report.validationSummary.pendingDocuments > 0 && (
+            <Card className="p-5 border-2 border-warning bg-gradient-to-br from-warning/10 to-warning/5">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-warning/20 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-6 h-6 text-warning" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-warning mb-2">
+                    Verification Incomplete - Documents Required
+                  </h3>
+                  <p className="text-sm text-foreground mb-4">
+                    This Source of Funds verification cannot be fully completed. The following documents 
+                    are required from the applicant to validate their stated claims:
+                  </p>
+                  
+                  <div className="bg-white/80 rounded-lg p-4 border border-warning/30 mb-4">
+                    <p className="font-semibold text-foreground mb-3">Missing Documents:</p>
+                    <div className="space-y-3">
+                      {report.fundingSources.flatMap((source) =>
+                        source.requiredDocuments
+                          .filter((doc) => doc.status === "missing")
+                          .map((doc) => (
+                            <div key={doc.id} className="flex items-start gap-3 p-3 bg-warning/5 rounded border border-warning/20">
+                              <AlertTriangle className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="font-medium text-foreground">{doc.name}</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  <span className="font-medium">For:</span> {source.description}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium">Required to verify:</span> {doc.checksToPerform?.join(", ") || doc.reason}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                    <p className="font-semibold text-primary mb-2">Action Required:</p>
+                    <p className="text-sm text-foreground">
+                      Please request the above documents from the applicant. Once received, upload them 
+                      to the system and re-run the validation process to complete the Source of Funds verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* Detailed Findings by Funding Source */}
           <Card className="p-4">
@@ -566,12 +648,22 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </div>
           </Card>
 
-          <Separator />
+          <Separator className="my-8" />
 
           {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground">
-            <p>This report is generated for compliance and audit purposes.</p>
-            <p>NatWest Source of Funds Verification System</p>
+          <div className="text-center py-6 px-8 bg-accent/20 rounded-xl border border-border/50">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ClipboardList className="w-4 h-4 text-primary" />
+              </div>
+              <span className="font-semibold text-foreground">Source of Funds Verification System</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This report is generated for compliance and audit purposes.
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Report generated on {formatDate(report.generatedAt)} | Document ID: {report.id}
+            </p>
           </div>
         </CardContent>
       </Card>
