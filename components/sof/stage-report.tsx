@@ -241,6 +241,24 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </Card>
           )}
 
+          {/* Analyst Notes */}
+          {report.notes && report.notes.length > 0 && (
+            <Card className="p-4 border-primary/30 bg-primary/5">
+              <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
+                <FileText className="w-5 h-5" />
+                Analyst Notes &amp; Recommendations
+              </h3>
+              <ul className="space-y-2">
+                {report.notes.map((note, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                    <span className="text-primary mt-0.5">•</span>
+                    {note}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           {/* Audit Trail */}
           <Card className="p-4">
             <h3 className="font-semibold mb-4 text-foreground">Audit Trail</h3>

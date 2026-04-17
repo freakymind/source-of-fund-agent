@@ -4,9 +4,12 @@ export type FundingSourceType =
   | "employment"
   | "gift"
   | "property_sale"
+  | "property_equity"
+  | "investments"
   | "investment"
   | "inheritance"
   | "business_income"
+  | "business"
   | "savings"
   | "loan"
 
@@ -40,8 +43,13 @@ export type DocumentType =
   | "property_deed"
   | "sale_agreement"
   | "investment_statement"
+  | "source_of_investment"
   | "will_probate"
+  | "probate_document"
   | "business_accounts"
+  | "company_accounts"
+  | "property_valuation"
+  | "mortgage_statement"
   | "loan_agreement"
 
 export interface UploadedFile {
@@ -96,6 +104,7 @@ export interface AuditReport {
   }
   plausibilityScore: number
   flaggedItems: FlagItem[]
+  notes?: string[]
   auditTrail: AuditTrailItem[]
 }
 

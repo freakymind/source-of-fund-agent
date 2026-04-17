@@ -36,9 +36,12 @@ const sourceIcons: Record<string, React.ComponentType<{ className?: string }>> =
   gift: Gift,
   savings: PiggyBank,
   property_sale: Home,
+  property_equity: Home,
   investment: FileText,
+  investments: FileText,
   inheritance: FileText,
   business_income: Briefcase,
+  business: Briefcase,
   loan: FileText,
 }
 
@@ -231,20 +234,27 @@ export function StageChecklist({
             )
           })}
 
-          <div className="pt-4 border-t border-border">
+          <div className="pt-4 border-t border-border space-y-3">
             <Button
               onClick={onValidateAll}
-              disabled={!allDocumentsUploaded || isProcessing}
+              disabled={uploadedDocs === 0 || isProcessing}
               className="w-full bg-primary hover:bg-primary/90"
             >
               {isProcessing ? (
                 "Processing Documents..."
-              ) : allDocumentsUploaded ? (
+              ) : uploadedDocs === totalDocs ? (
                 "Run Validation Agents"
+              ) : uploadedDocs > 0 ? (
+                `Run Validation on ${uploadedDocs} Document${uploadedDocs > 1 ? "s" : ""} (${totalDocs - uploadedDocs} missing)`
               ) : (
-                "Upload All Required Documents to Continue"
+                "Upload Documents to Continue"
               )}
             </Button>
+            {uploadedDocs > 0 && uploadedDocs < totalDocs && (
+              <p className="text-xs text-center text-muted-foreground">
+                You can proceed with partial documents. Missing documents can be uploaded later and re-validated.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

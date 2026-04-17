@@ -87,8 +87,9 @@ function ValidationResultCard({
             >
               {result.status === "valid" ? "VALID" : result.status === "flagged" ? "FLAGGED" : "WARNING"}
             </Badge>
-            <Button size="sm" variant="ghost" onClick={onRerun}>
-              <RefreshCw className="w-4 h-4" />
+            <Button size="sm" variant="outline" onClick={onRerun} className="gap-1">
+              <RefreshCw className="w-3 h-3" />
+              Re-run
             </Button>
           </div>
         </div>
@@ -299,14 +300,24 @@ export function StageAgents({
             )}
           </div>
 
-          <div className="pt-4 border-t border-border">
+          <div className="pt-4 border-t border-border space-y-3">
             <Button
               onClick={onGenerateReport}
-              disabled={!allValidated || isProcessing}
+              disabled={validatedDocs.length === 0 || isProcessing}
               className="w-full bg-primary hover:bg-primary/90"
             >
-              Generate Audit Report
+              {isProcessing 
+                ? "Generating Report..." 
+                : flaggedCount > 0 
+                  ? `Generate Report (${flaggedCount} flag${flaggedCount > 1 ? "s" : ""} to review)`
+                  : "Generate Audit Report"
+              }
             </Button>
+            {flaggedCount > 0 && (
+              <p className="text-xs text-center text-muted-foreground">
+                You can re-run agents on flagged documents above, or proceed to generate the report with flags noted.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

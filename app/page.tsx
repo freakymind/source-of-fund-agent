@@ -15,15 +15,17 @@ import type {
   AgentType,
 } from "@/lib/sof-types"
 import {
-  generateMockFundingSources,
+  generateFundingSourcesForCase,
   generateMockValidationResult,
   generateMockAuditReport,
   INITIAL_CHAT_MESSAGES,
+  EXAMPLE_CASES,
 } from "@/lib/mock-data"
 
 export default function SOFAgentPage() {
   const [currentStage, setCurrentStage] = useState<WorkflowStage>(1)
   const [statement, setStatement] = useState("")
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
   const [fundingSources, setFundingSources] = useState<FundingSource[]>([])
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES)
@@ -45,34 +47,73 @@ export default function SOFAgentPage() {
     []
   )
 
-  const handleAnalyzeStatement = useCallback(async () => {
+  const handleAnalyzeStatement = useCallback(async (caseId?: string) => {
     setIsProcessing(true)
-    addChatMessage(
-      "Analyzing your statement to identify funding sources and required documents...",
-      "assistant"
-    )
+    
+    const selectedCase = caseId 
+      ? EXAMPLE_CASES.find(c => c.id === caseId)
+      : null
+    
+    if (selectedCase) {
+      setSelectedCaseId(caseId!)
+      addChatMessage(
+        `Loading example case: "${selectedCase.name}" (${selectedCase.complexity} complexity)\n\nScenario: ${selectedCase.scenario}`,
+        "assistant"
+      )
+    } else {
+      addChatMessage(
+        "Analyzing your custom statement to identify funding sources and required documents...",
+        "assistant"
+      )
+    }
 
     // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    const sources = generateMockFundingSources()
+    // Generate sources based on case or default
+    const sources = caseId 
+      ? generateFundingSourcesForCase(caseId)
+      : generateFundingSourcesForCase("case-5") // Default complex case
+
     setFundingSources(sources)
 
     const totalDocs = sources.reduce(
       (sum, fs) => sum + fs.requiredDocuments.length,
       0
     )
-
-    addChatMessage(
-      `Analysis complete! I identified ${sources.length} funding sources requiring ${totalDocs} documents for verification:\n\n` +
-        sources
-          .map(
-            (s) =>
-              `- ${s.description} (${s.requiredDocuments.length} documents needed)`
-          )
-          .join("\n"),
-      "assistant"
+    const uploadedDocs = sources.reduce(
+      (sum, fs) => sum + fs.requiredDocuments.filter(d => d.status !== "missing").length,
+      0
     )
+    const missingDocs = totalDocs - uploadedDocs
+
+    let statusMessage = `Analysis complete! Identified ${sources.length} funding source${sources.length > 1 ? "s" : ""} requiring ${totalDocs} documents:\n\n`
+    statusMessage += sources.map(s => {
+      const docsStatus = s.requiredDocuments.map(d => {
+        if (d.status === "validated") return "validated"
+        if (d.status === "flagged") return "flagged"
+        if (d.status === "uploaded") return "uploaded"
+        return "missing"
+      })
+      const validated = docsStatus.filter(s => s === "validated").length
+      const flagged = docsStatus.filter(s => s === "flagged").length
+      const missing = docsStatus.filter(s => s === "missing").length
+      
+      let statusText = ""
+      if (validated > 0) statusText += `${validated} validated`
+      if (flagged > 0) statusText += `${statusText ? ", " : ""}${flagged} flagged`
+      if (missing > 0) statusText += `${statusText ? ", " : ""}${missing} missing`
+      
+      return `- ${s.description} (${statusText || "pending"})`
+    }).join("\n")
+
+    if (missingDocs > 0) {
+      statusMessage += `\n\n${missingDocs} document${missingDocs > 1 ? "s" : ""} still required for upload.`
+    } else {
+      statusMessage += "\n\nAll documents are already uploaded. Review the validation results."
+    }
+
+    addChatMessage(statusMessage, "assistant")
 
     setCurrentStage(2)
     setIsProcessing(false)
@@ -127,14 +168,14 @@ export default function SOFAgentPage() {
     )
 
     // Simulate validation delay
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    await new Promise((resolve) => setTimeout(resolve, 2500))
 
     setFundingSources((prev) =>
       prev.map((source) => ({
         ...source,
         requiredDocuments: source.requiredDocuments.map((doc) => {
-          if (doc.status === "uploaded") {
-            const result = generateMockValidationResult(doc.type, Math.random() > 0.15)
+          if (doc.status === "uploaded" && !doc.validationResult) {
+            const result = generateMockValidationResult(doc.type, Math.random() > 0.2)
             return {
               ...doc,
               status: result.status === "valid" ? ("validated" as const) : ("flagged" as const),
@@ -146,28 +187,52 @@ export default function SOFAgentPage() {
       }))
     )
 
+    // Count results
+    const validatedCount = fundingSources.reduce(
+      (sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "validated" || d.status === "uploaded").length,
+      0
+    )
+
     addChatMessage(
-      "Validation complete! The specialized agents have processed all documents. Review the results and I can answer any questions about the findings.",
+      `Validation complete! The specialized agents have processed ${validatedCount} documents. Review the results in Stage 3, and I can answer any questions about the findings.`,
       "assistant"
     )
 
     setCurrentStage(3)
     setIsProcessing(false)
-  }, [addChatMessage])
+  }, [addChatMessage, fundingSources])
 
   const handleRerunAgent = useCallback(
     async (agentType: AgentType, documentId: string) => {
       setIsProcessing(true)
       addChatMessage(
-        `Re-running ${agentType} agent on the selected document...`,
+        `Re-running ${agentType} agent on the selected document with updated parameters...`,
         "assistant",
         agentType
       )
 
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
+      // Update the specific document with new validation
+      setFundingSources((prev) =>
+        prev.map((source) => ({
+          ...source,
+          requiredDocuments: source.requiredDocuments.map((doc) => {
+            if (doc.id === documentId) {
+              const result = generateMockValidationResult(doc.type, true) // Re-run tends to pass
+              return {
+                ...doc,
+                status: "validated" as const,
+                validationResult: result,
+              }
+            }
+            return doc
+          }),
+        }))
+      )
+
       addChatMessage(
-        `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} agent validation complete. Results have been updated.`,
+        `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} agent re-validation complete. The results have been updated - check if the flags have been resolved.`,
         "assistant",
         agentType
       )
@@ -186,17 +251,29 @@ export default function SOFAgentPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    const report = generateMockAuditReport(fundingSources)
+    const applicantName = selectedCaseId 
+      ? EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.applicantName || "Applicant"
+      : "Applicant"
+    
+    const report = generateMockAuditReport(fundingSources, applicantName)
     setAuditReport(report)
 
-    addChatMessage(
-      `Audit report generated successfully!\n\nSummary:\n- Total Funds Verified: £${report.totalFundsVerified.toLocaleString()}\n- Documents Validated: ${report.validationSummary.validatedDocuments}/${report.validationSummary.totalDocuments}\n- Plausibility Score: ${report.plausibilityScore}%\n- Status: ${report.overallStatus.toUpperCase()}`,
-      "assistant"
-    )
+    let summaryMsg = `Audit report generated successfully!\n\nSummary:\n`
+    summaryMsg += `- Applicant: ${report.applicantName}\n`
+    summaryMsg += `- Total Funds Verified: £${report.totalFundsVerified.toLocaleString()}\n`
+    summaryMsg += `- Documents: ${report.validationSummary.validatedDocuments} validated, ${report.validationSummary.flaggedDocuments} flagged, ${report.validationSummary.pendingDocuments} pending\n`
+    summaryMsg += `- Plausibility Score: ${report.plausibilityScore}%\n`
+    summaryMsg += `- Status: ${report.overallStatus.toUpperCase()}`
+
+    if (report.notes && report.notes.length > 0) {
+      summaryMsg += `\n\nAnalyst Notes:\n${report.notes.map(n => `- ${n}`).join("\n")}`
+    }
+
+    addChatMessage(summaryMsg, "assistant")
 
     setCurrentStage(4)
     setIsProcessing(false)
-  }, [addChatMessage, fundingSources])
+  }, [addChatMessage, fundingSources, selectedCaseId])
 
   const handleExportPDF = useCallback(() => {
     addChatMessage(
@@ -216,32 +293,80 @@ export default function SOFAgentPage() {
 
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Simple response logic based on message content
       const lowerMessage = message.toLowerCase()
 
       if (lowerMessage.includes("flag") || lowerMessage.includes("issue")) {
-        addChatMessage(
-          "Based on my analysis, the flagged items typically indicate:\n\n1. Discrepancies between stated amounts and document evidence\n2. Unexplained large transactions\n3. Missing signatures or dates\n4. Inconsistent information across documents\n\nWould you like me to focus on a specific flagged item?",
-          "assistant"
+        const flaggedDocs = fundingSources.flatMap((fs) =>
+          fs.requiredDocuments.filter((d) => d.status === "flagged")
         )
-      } else if (lowerMessage.includes("re-run") || lowerMessage.includes("rerun")) {
-        const agents = ["payroll", "banking", "legal", "property"]
-        const mentionedAgent = agents.find((a) => lowerMessage.includes(a))
-        if (mentionedAgent) {
+        if (flaggedDocs.length > 0) {
+          const flagDetails = flaggedDocs.map(d => {
+            const flags = d.validationResult?.flags || []
+            return `**${d.name}:**\n${flags.map(f => `  - [${f.severity.toUpperCase()}] ${f.message}`).join("\n")}`
+          }).join("\n\n")
           addChatMessage(
-            `I'll re-run the ${mentionedAgent} agent with the current documents. This may help if you've provided additional context or if you want a fresh analysis.`,
-            "assistant",
-            mentionedAgent as AgentType
+            `There are ${flaggedDocs.length} flagged document(s):\n\n${flagDetails}\n\nWould you like me to re-run validation on any of these, or do you want to upload additional supporting documents?`,
+            "assistant"
           )
         } else {
           addChatMessage(
-            "Which agent would you like me to re-run? Available agents are: Payroll, Banking, Legal, and Property.",
+            "Good news - there are currently no flagged items in this verification. All validated documents have passed the plausibility checks.",
             "assistant"
           )
         }
-      } else if (lowerMessage.includes("summary") || lowerMessage.includes("finding")) {
+      } else if (lowerMessage.includes("re-run") || lowerMessage.includes("rerun") || lowerMessage.includes("run again")) {
+        const agents = ["payroll", "banking", "legal", "property"]
+        const mentionedAgent = agents.find((a) => lowerMessage.includes(a))
+        if (mentionedAgent) {
+          const relevantDocs = fundingSources.flatMap((fs) =>
+            fs.requiredDocuments.filter((d) => d.validationResult?.agentType === mentionedAgent)
+          )
+          if (relevantDocs.length > 0) {
+            addChatMessage(
+              `I'll re-run the ${mentionedAgent} agent on ${relevantDocs.length} document(s). Click the "Re-run" button on any specific document in Stage 3 to trigger re-validation with updated parameters.`,
+              "assistant",
+              mentionedAgent as AgentType
+            )
+          } else {
+            addChatMessage(
+              `No documents are currently processed by the ${mentionedAgent} agent. Please upload relevant documents first.`,
+              "assistant"
+            )
+          }
+        } else {
+          addChatMessage(
+            "Which agent would you like me to re-run? Available agents:\n\n- **Payroll Agent**: Validates employment documents (payslips, contracts)\n- **Banking Agent**: Analyzes bank statements and financial records\n- **Legal Agent**: Reviews legal documents (gift letters, probate, tax returns)\n- **Property Agent**: Verifies property deeds, valuations, and sale agreements",
+            "assistant"
+          )
+        }
+      } else if (lowerMessage.includes("upload") || lowerMessage.includes("add document") || lowerMessage.includes("more doc")) {
+        const missingDocs = fundingSources.flatMap((fs) =>
+          fs.requiredDocuments.filter((d) => d.status === "missing")
+        )
+        if (missingDocs.length > 0) {
+          addChatMessage(
+            `You can upload the following missing documents:\n\n${missingDocs.map((d) => `- ${d.name}`).join("\n")}\n\nGo to Stage 2 (Document Checklist) and click "Upload Document" for each missing item. After uploading, run validation to process them.`,
+            "assistant"
+          )
+        } else {
+          addChatMessage(
+            "All required documents have been uploaded! You can still upload additional supporting documents if needed to address any flags or strengthen the verification.",
+            "assistant"
+          )
+        }
+      } else if (lowerMessage.includes("summary") || lowerMessage.includes("finding") || lowerMessage.includes("status")) {
+        const totalDocs = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.length, 0)
+        const validated = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "validated").length, 0)
+        const flagged = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "flagged").length, 0)
+        const missing = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "missing").length, 0)
+        
         addChatMessage(
-          `Here's a summary of the current findings:\n\n- ${fundingSources.length} funding sources identified\n- ${fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.length, 0)} total documents processed\n- Most documents show strong correlation with the applicant's statement\n\nThe verification process is ${currentStage < 4 ? "still in progress" : "complete"}.`,
+          `Current verification status:\n\n- **Funding Sources:** ${fundingSources.length} identified\n- **Total Documents:** ${totalDocs}\n  - Validated: ${validated}\n  - Flagged: ${flagged}\n  - Missing: ${missing}\n- **Stage:** ${currentStage} of 4\n\n${missing > 0 ? "Upload missing documents to proceed." : flagged > 0 ? "Review flagged items before generating the final report." : "Ready to generate the audit report!"}`,
+          "assistant"
+        )
+      } else if (lowerMessage.includes("note") || lowerMessage.includes("comment") || lowerMessage.includes("add observation")) {
+        addChatMessage(
+          "Analyst notes will be included in the final audit report. You can add specific observations by mentioning:\n\n- Request additional documentation\n- Highlight specific concerns\n- Add contextual information\n\nThese will appear in the Notes section of the final report.",
           "assistant"
         )
       } else if (lowerMessage.includes("missing") || lowerMessage.includes("document")) {
@@ -250,18 +375,18 @@ export default function SOFAgentPage() {
         )
         if (missingDocs.length > 0) {
           addChatMessage(
-            `There are ${missingDocs.length} documents still missing:\n\n${missingDocs.map((d) => `- ${d.name}`).join("\n")}\n\nPlease upload these to proceed with validation.`,
+            `There are ${missingDocs.length} document(s) still missing:\n\n${missingDocs.map((d) => `- ${d.name}: ${d.reason}`).join("\n")}\n\nPlease upload these to complete the verification.`,
             "assistant"
           )
         } else {
           addChatMessage(
-            "All required documents have been uploaded! You can proceed with the validation process.",
+            "All required documents have been uploaded. You can proceed with validation or generate the audit report.",
             "assistant"
           )
         }
       } else {
         addChatMessage(
-          "I understand you're asking about the source of funds verification. I can help you with:\n\n- Explaining flagged items\n- Re-running specific agents\n- Summarizing findings\n- Checking document status\n\nWhat would you like to know more about?",
+          "I can help you with:\n\n- **Review flags** - Explain flagged items and issues\n- **Re-run agents** - Re-validate specific documents\n- **Upload documents** - Guide you through missing documents\n- **Check status** - Show current verification progress\n- **Add notes** - Include analyst observations in the report\n\nWhat would you like to do?",
           "assistant"
         )
       }
@@ -270,6 +395,13 @@ export default function SOFAgentPage() {
     },
     [addChatMessage, fundingSources, currentStage]
   )
+
+  const handleStageClick = useCallback((stage: WorkflowStage) => {
+    // Allow going back to previous stages or current stage
+    if (stage <= currentStage || (stage === 2 && fundingSources.length > 0)) {
+      setCurrentStage(stage)
+    }
+  }, [currentStage, fundingSources])
 
   const renderStageContent = () => {
     switch (currentStage) {
@@ -316,7 +448,7 @@ export default function SOFAgentPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card print:hidden">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -332,19 +464,24 @@ export default function SOFAgentPage() {
                 </p>
               </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Demo Version
+            <div className="flex items-center gap-3">
+              {selectedCaseId && (
+                <span className="text-xs bg-accent px-2 py-1 rounded text-muted-foreground">
+                  Case: {EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.name}
+                </span>
+              )}
+              <span className="text-sm text-muted-foreground">Demo Version</span>
             </div>
           </div>
         </div>
       </header>
 
       {/* Stage Indicator */}
-      <div className="border-b border-border bg-card/50 py-6">
+      <div className="border-b border-border bg-card/50 py-6 print:hidden">
         <div className="container mx-auto px-4">
           <StageIndicator
             currentStage={currentStage}
-            onStageClick={setCurrentStage}
+            onStageClick={handleStageClick}
           />
         </div>
       </div>
@@ -356,7 +493,7 @@ export default function SOFAgentPage() {
           <div className="lg:col-span-2">{renderStageContent()}</div>
 
           {/* Chat Panel */}
-          <div className="lg:col-span-1 h-[calc(100vh-280px)] min-h-[500px]">
+          <div className="lg:col-span-1 h-[calc(100vh-280px)] min-h-[500px] print:hidden">
             <ChatPanel
               messages={chatMessages}
               onSendMessage={handleSendMessage}
