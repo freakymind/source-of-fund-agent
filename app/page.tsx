@@ -652,56 +652,6 @@ export default function SOFAgentPage() {
             
             {/* Stage 1: Case Selection */}
             {currentStage === 1 && (
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
-                    Select Example Case
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Choose a case to begin. The agent will analyze the applicant&apos;s statement and check uploaded documents.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {EXAMPLE_CASES.map((caseItem) => (
-                      <button
-                        key={caseItem.id}
-                        onClick={() => handleSelectCase(caseItem.id)}
-                        disabled={isProcessing}
-                        className={cn(
-                          "text-left p-4 rounded-lg border transition-all",
-                          "hover:border-primary/50 hover:bg-accent/30",
-                          "disabled:opacity-50 disabled:cursor-not-allowed",
-                          selectedCaseId === caseItem.id && isProcessing && "border-primary bg-primary/10"
-                        )}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className={cn(
-                            "text-xs",
-                            caseItem.complexity === "Simple" && "border-green-600 text-green-600",
-                            caseItem.complexity === "Moderate" && "border-amber-600 text-amber-600",
-                            caseItem.complexity === "Complex" && "border-red-600 text-red-600",
-                          )}>
-                            {caseItem.complexity}
-                          </Badge>
-                          {selectedCaseId === caseItem.id && isProcessing ? (
-                            <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <h4 className="font-medium text-sm text-foreground">{caseItem.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{caseItem.description}</p>
-                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                          <FileCheck className="w-3 h-3" />
-                          {caseItem.scenario}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
             )}
 
             {/* Processing Steps (shown when processing) */}
@@ -916,6 +866,58 @@ export default function SOFAgentPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Example Cases - Demo Section at Bottom */}
+            <Card>
+              <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Demo: Select Example Case
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Choose a case to begin. The agent will analyze the applicant&apos;s statement and check uploaded documents.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {EXAMPLE_CASES.map((caseItem) => (
+                    <button
+                      key={caseItem.id}
+                      onClick={() => handleSelectCase(caseItem.id)}
+                      disabled={isProcessing}
+                      className={cn(
+                        "text-left p-4 rounded-lg border transition-all",
+                        "hover:border-primary/50 hover:bg-accent/30",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                        selectedCaseId === caseItem.id && isProcessing && "border-primary bg-primary/10"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge variant="outline" className={cn(
+                          "text-xs",
+                          caseItem.complexity === "Simple" && "border-green-600 text-green-600",
+                          caseItem.complexity === "Moderate" && "border-amber-600 text-amber-600",
+                          caseItem.complexity === "Complex" && "border-red-600 text-red-600",
+                        )}>
+                          {caseItem.complexity}
+                        </Badge>
+                        {selectedCaseId === caseItem.id && isProcessing ? (
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <h4 className="font-medium text-sm text-foreground">{caseItem.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{caseItem.description}</p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                        <FileCheck className="w-3 h-3" />
+                        {caseItem.scenario}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Chat Panel */}
