@@ -54,13 +54,16 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
 
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div
               key={message.id}
               className={cn(
-                "flex gap-3",
+                "flex gap-3 animate-slide-in",
                 message.role === "user" && "flex-row-reverse"
               )}
+              style={{
+                animationDelay: `${index * 100}ms`,
+              }}
             >
               <div
                 className={cn(
@@ -106,15 +109,16 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
             </div>
           ))}
           {isProcessing && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <div className="flex gap-3 animate-slide-in">
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
               </div>
-              <div className="bg-accent rounded-lg p-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div className="bg-primary/15 border border-primary/30 rounded-lg p-3 flex-1">
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-xs font-medium text-primary">Agent working</span>
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse-soft" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse-soft" style={{ animationDelay: "200ms" }} />
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse-soft" style={{ animationDelay: "400ms" }} />
                 </div>
               </div>
             </div>
