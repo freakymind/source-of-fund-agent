@@ -1435,21 +1435,36 @@ export function generateMockValidationResult(doc: RequiredDocument): ValidationR
     return doc.validationResult
   }
   
+  // Safely determine agent type
+  const docType = doc.type || ""
+  const docName = doc.name || "Document"
+  
+  const getAgentType = (): "payroll" | "banking" | "legal" | "property" => {
+    if (docType.includes("payslip") || docType.includes("contract") || docType.includes("employment")) {
+      return "payroll"
+    }
+    if (docType.includes("bank")) {
+      return "banking"
+    }
+    if (docType.includes("property") || docType.includes("valuation") || docType.includes("deed")) {
+      return "property"
+    }
+    return "legal"
+  }
+  
   // Generate a simple valid result for newly uploaded docs
   return {
     status: "valid",
-    agentType: doc.type.includes("payslip") || doc.type.includes("contract") ? "payroll" :
-               doc.type.includes("bank") ? "banking" :
-               doc.type.includes("property") || doc.type.includes("valuation") ? "property" : "legal",
+    agentType: getAgentType(),
     extractedData: [
-      { label: "Document Type", value: doc.name, confidence: 0.95 },
+      { label: "Document Type", value: docName, confidence: 0.95 },
       { label: "Upload Date", value: new Date().toLocaleDateString("en-GB"), confidence: 0.99 },
     ],
     matches: [
       { statementClaim: "Document uploaded", documentEvidence: "Document received and processed", status: "match" },
     ],
     flags: [],
-    summary: `${doc.name} has been processed successfully.`,
+    summary: `${docName} has been processed successfully.`,
   }
 }
 
