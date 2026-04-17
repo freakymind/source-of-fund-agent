@@ -86,7 +86,7 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
               >
                 <div
                   className={cn(
-                    "rounded-lg p-3 text-sm",
+                    "rounded-lg p-3 text-sm whitespace-pre-line",
                     message.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-accent text-foreground"

@@ -1,19 +1,26 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { StageIndicator } from "@/components/sof/stage-indicator"
-import { StageStatement } from "@/components/sof/stage-statement"
-import { StageChecklist } from "@/components/sof/stage-checklist"
-import { StageAgents } from "@/components/sof/stage-agents"
-import { StageReport } from "@/components/sof/stage-report"
 import { ChatPanel } from "@/components/sof/chat-panel"
-import { AgentActivityFeed, type AgentActivity } from "@/components/sof/agent-activity-feed"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
+import { 
+  FileText, Upload, CheckCircle2, AlertTriangle, XCircle, 
+  Loader2, ChevronRight, Eye, RefreshCw, Printer, Download,
+  Briefcase, Gift, Home, PiggyBank, Building2, TrendingUp,
+  FileCheck, Clock, Bot, Sparkles
+} from "lucide-react"
 import type {
   WorkflowStage,
   FundingSource,
   AuditReport,
   ChatMessage,
   AgentType,
+  RequiredDocument,
 } from "@/lib/sof-types"
 import {
   generateFundingSourcesForCase,
@@ -23,6 +30,56 @@ import {
   EXAMPLE_CASES,
 } from "@/lib/mock-data"
 
+// Processing step component for showing agent work
+function ProcessingStep({ 
+  text, 
+  status, 
+  detail 
+}: { 
+  text: string
+  status: "pending" | "running" | "complete" | "error"
+  detail?: string 
+}) {
+  return (
+    <div className="flex items-start gap-3 py-2">
+      <div className="mt-0.5">
+        {status === "pending" && <div className="w-4 h-4 rounded-full border-2 border-muted" />}
+        {status === "running" && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
+        {status === "complete" && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+        {status === "error" && <XCircle className="w-4 h-4 text-destructive" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={cn(
+          "text-sm",
+          status === "running" && "text-primary font-medium",
+          status === "complete" && "text-muted-foreground",
+          status === "pending" && "text-muted-foreground/60"
+        )}>
+          {text}
+        </p>
+        {detail && status === "complete" && (
+          <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Source type icon mapping
+const sourceIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  employment: Briefcase,
+  gift: Gift,
+  savings: PiggyBank,
+  property_sale: Home,
+  property_equity: Home,
+  investment: TrendingUp,
+  investments: TrendingUp,
+  inheritance: FileText,
+  business_income: Building2,
+  business: Building2,
+  loan: FileText,
+}
+
 export default function SOFAgentPage() {
   const [currentStage, setCurrentStage] = useState<WorkflowStage>(1)
   const [statement, setStatement] = useState("")
@@ -30,37 +87,23 @@ export default function SOFAgentPage() {
   const [fundingSources, setFundingSources] = useState<FundingSource[]>([])
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT_MESSAGES)
-  const [agentActivities, setAgentActivities] = useState<AgentActivity[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
-
-  const addActivity = useCallback((
-    action: string, 
-    agentType?: AgentActivity["agentType"], 
-    status: AgentActivity["status"] = "info",
+  
+  // Processing state for visual feedback
+  const [processingSteps, setProcessingSteps] = useState<Array<{
+    text: string
+    status: "pending" | "running" | "complete" | "error"
     detail?: string
-  ) => {
-    setAgentActivities(prev => [...prev, {
-      id: `act-${Date.now()}-${Math.random()}`,
-      timestamp: new Date(),
-      agentType,
-      action,
-      detail,
-      status,
-    }])
-  }, [])
+  }>>([])
+  
+  const contentRef = useRef<HTMLDivElement>(null)
 
-  const updateLastActivity = useCallback((status: AgentActivity["status"], detail?: string) => {
-    setAgentActivities(prev => {
-      if (prev.length === 0) return prev
-      const updated = [...prev]
-      updated[updated.length - 1] = {
-        ...updated[updated.length - 1],
-        status,
-        detail: detail || updated[updated.length - 1].detail,
-      }
-      return updated
-    })
-  }, [])
+  // Auto-scroll to bottom when processing
+  useEffect(() => {
+    if (processingSteps.length > 0 && contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight
+    }
+  }, [processingSteps])
 
   const addChatMessage = useCallback(
     (content: string, role: "user" | "assistant", agentType?: AgentType) => {
@@ -78,109 +121,86 @@ export default function SOFAgentPage() {
     []
   )
 
-  const handleAnalyzeStatement = useCallback(async (caseId?: string) => {
+  const updateStep = (index: number, status: "pending" | "running" | "complete" | "error", detail?: string) => {
+    setProcessingSteps(prev => {
+      const updated = [...prev]
+      if (updated[index]) {
+        updated[index] = { ...updated[index], status, detail: detail || updated[index].detail }
+      }
+      return updated
+    })
+  }
+
+  const handleSelectCase = useCallback(async (caseId: string) => {
+    const selectedCase = EXAMPLE_CASES.find(c => c.id === caseId)
+    if (!selectedCase) return
+
     setIsProcessing(true)
-    setAgentActivities([]) // Reset activity feed
+    setSelectedCaseId(caseId)
+    setStatement(selectedCase.statement)
+    setFundingSources([])
     
-    const selectedCase = caseId 
-      ? EXAMPLE_CASES.find(c => c.id === caseId)
-      : null
-    
-    // Activity: Start
-    addActivity("Case selected, initializing analysis...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    
-    if (selectedCase) {
-      setSelectedCaseId(caseId!)
-      setStatement(selectedCase.statement)
-      updateLastActivity("complete", `Loaded: ${selectedCase.name}`)
-      
-      addChatMessage(
-        `Loading case: "${selectedCase.name}" (${selectedCase.complexity} complexity)\n\nScenario: ${selectedCase.scenario}`,
-        "assistant"
-      )
-    }
+    // Initialize processing steps
+    setProcessingSteps([
+      { text: "Reading applicant statement...", status: "pending" },
+      { text: "Identifying claimed funding sources...", status: "pending" },
+      { text: "Extracting amounts and dates...", status: "pending" },
+      { text: "Determining required documents...", status: "pending" },
+      { text: "Checking available documents...", status: "pending" },
+    ])
 
-    // Activity: Parsing statement
-    addActivity("Parsing applicant statement...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    updateLastActivity("complete", "Statement parsed successfully")
+    addChatMessage(`Loading case: ${selectedCase.name}`, "assistant")
 
-    // Activity: Identifying sources
-    addActivity("Identifying funding sources from statement...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // Step 1: Reading statement
+    await new Promise(r => setTimeout(r, 300))
+    updateStep(0, "running")
+    await new Promise(r => setTimeout(r, 1200))
+    updateStep(0, "complete", `${selectedCase.statement.split(" ").length} words analyzed`)
 
-    // Generate sources based on case
-    const sources = caseId 
-      ? generateFundingSourcesForCase(caseId)
-      : generateFundingSourcesForCase("case-5")
+    // Step 2: Identifying sources
+    updateStep(1, "running")
+    await new Promise(r => setTimeout(r, 1500))
+    const sources = generateFundingSourcesForCase(caseId)
+    updateStep(1, "complete", `Found ${sources.length} funding source(s)`)
 
-    setFundingSources(sources)
-    updateLastActivity("complete", `Found ${sources.length} funding source(s)`)
+    // Step 3: Extracting amounts
+    updateStep(2, "running")
+    await new Promise(r => setTimeout(r, 1000))
+    const totalAmount = sources.reduce((sum, s) => sum + s.amount, 0)
+    updateStep(2, "complete", `Total claimed: £${totalAmount.toLocaleString()}`)
 
-    // Activity: Determine required docs
-    addActivity("Determining required documents per source...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 400))
+    // Step 4: Determining documents
+    updateStep(3, "running")
+    await new Promise(r => setTimeout(r, 1200))
+    const totalDocs = sources.reduce((sum, s) => sum + s.requiredDocuments.length, 0)
+    updateStep(3, "complete", `${totalDocs} documents required`)
 
-    const totalDocs = sources.reduce((sum, fs) => sum + fs.requiredDocuments.length, 0)
-    updateLastActivity("complete", `${totalDocs} documents identified`)
-
-    // Activity: Check existing documents
-    addActivity("Checking pre-loaded documents...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
+    // Step 5: Checking available
+    updateStep(4, "running")
+    await new Promise(r => setTimeout(r, 800))
     const uploadedDocs = sources.reduce(
-      (sum, fs) => sum + fs.requiredDocuments.filter(d => d.status !== "missing").length,
-      0
+      (sum, fs) => sum + fs.requiredDocuments.filter(d => d.status !== "missing").length, 0
     )
     const missingDocs = totalDocs - uploadedDocs
+    updateStep(4, "complete", missingDocs > 0 
+      ? `${uploadedDocs} loaded, ${missingDocs} missing` 
+      : "All documents available"
+    )
 
-    if (missingDocs > 0) {
-      updateLastActivity("info", `${uploadedDocs} documents loaded, ${missingDocs} missing`)
-    } else {
-      updateLastActivity("complete", `All ${totalDocs} documents present`)
-    }
-
-    // Activity for each funding source
-    for (const source of sources) {
-      const sourceDocsLoaded = source.requiredDocuments.filter(d => d.status !== "missing").length
-      const sourceTotalDocs = source.requiredDocuments.length
-      
-      if (sourceDocsLoaded < sourceTotalDocs) {
-        addActivity(
-          `${source.type.replace("_", " ")} source: ${sourceDocsLoaded}/${sourceTotalDocs} documents`,
-          undefined,
-          "info",
-          source.description
-        )
-      } else {
-        addActivity(
-          `${source.type.replace("_", " ")} source: All documents loaded`,
-          undefined,
-          "complete",
-          source.description
-        )
-      }
-    }
+    setFundingSources(sources)
 
     // Summary message
-    let statusMessage = `Analysis complete! Identified ${sources.length} funding source${sources.length > 1 ? "s" : ""} requiring ${totalDocs} documents:\n\n`
-    statusMessage += sources.map(s => {
+    let msg = `Statement analyzed. Found ${sources.length} funding source(s):\n\n`
+    msg += sources.map(s => {
       const missing = s.requiredDocuments.filter(d => d.status === "missing").length
-      return `- ${s.description} (${missing > 0 ? missing + " missing" : "all loaded"})`
+      return `• ${s.description}: £${s.amount.toLocaleString()} ${missing > 0 ? `(${missing} doc missing)` : "(docs ready)"}`
     }).join("\n")
-
-    if (missingDocs > 0) {
-      statusMessage += `\n\n${missingDocs} document${missingDocs > 1 ? "s" : ""} missing. You can upload or proceed with partial validation.`
-    } else {
-      statusMessage += "\n\nAll documents loaded. Ready for validation."
-    }
-
-    addChatMessage(statusMessage, "assistant")
+    
+    addChatMessage(msg, "assistant")
 
     setCurrentStage(2)
     setIsProcessing(false)
-  }, [addChatMessage, addActivity, updateLastActivity])
+  }, [addChatMessage])
 
   const handleUploadDocument = useCallback(
     async (sourceId: string, documentId: string) => {
@@ -189,8 +209,11 @@ export default function SOFAgentPage() {
       const source = fundingSources.find(fs => fs.id === sourceId)
       const doc = source?.requiredDocuments.find(d => d.id === documentId)
 
-      addActivity(`Uploading ${doc?.name || "document"}...`, "orchestrator", "running")
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      setProcessingSteps([
+        { text: `Uploading ${doc?.name || "document"}...`, status: "running" },
+      ])
+
+      await new Promise(r => setTimeout(r, 800))
 
       setFundingSources((prev) =>
         prev.map((s) =>
@@ -216,77 +239,109 @@ export default function SOFAgentPage() {
         )
       )
 
-      updateLastActivity("complete", "Document uploaded successfully")
-      addChatMessage("Document uploaded. Upload remaining documents or run validation.", "assistant")
+      updateStep(0, "complete", "Document uploaded")
+      addChatMessage(`${doc?.name} uploaded successfully.`, "assistant")
       setIsProcessing(false)
     },
-    [addChatMessage, addActivity, updateLastActivity, fundingSources]
+    [addChatMessage, fundingSources]
   )
 
   const handleValidateAll = useCallback(async () => {
     setIsProcessing(true)
-    addActivity("Starting document validation...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    updateLastActivity("complete")
 
     // Collect docs to validate
     const docsToValidate = fundingSources.flatMap(fs => 
-      fs.requiredDocuments.filter(d => d.status === "uploaded" && !d.validationResult)
+      fs.requiredDocuments.filter(d => d.status === "uploaded" || d.status === "validated" || d.status === "flagged")
     )
 
-    addChatMessage(
-      `Running specialized agents on ${docsToValidate.length} document(s)...`,
-      "assistant"
-    )
+    // Build processing steps for each agent
+    const steps: Array<{ text: string; status: "pending" | "running" | "complete" | "error"; detail?: string }> = [
+      { text: "Initializing validation agents...", status: "pending" },
+    ]
 
-    // Simulate each agent validating relevant documents
-    const agentTypes: AgentType[] = ["payroll", "banking", "legal", "property"]
-    
-    for (const agentType of agentTypes) {
-      const relevantDocs = docsToValidate.filter(d => {
-        if (agentType === "payroll") return ["payslip", "employment_contract"].includes(d.type)
-        if (agentType === "banking") return ["bank_statement"].includes(d.type)
-        if (agentType === "legal") return ["gift_letter", "probate_document", "will_probate", "tax_return"].includes(d.type)
-        if (agentType === "property") return ["property_deed", "sale_agreement", "property_valuation", "mortgage_statement"].includes(d.type)
-        return false
-      })
+    // Group docs by agent type
+    const payrollDocs = docsToValidate.filter(d => ["payslip", "employment_contract"].includes(d.type))
+    const bankingDocs = docsToValidate.filter(d => ["bank_statement", "investment_statement", "company_accounts", "business_accounts"].includes(d.type))
+    const legalDocs = docsToValidate.filter(d => ["gift_letter", "probate_document", "will_probate", "tax_return"].includes(d.type))
+    const propertyDocs = docsToValidate.filter(d => ["property_deed", "sale_agreement", "property_valuation", "mortgage_statement"].includes(d.type))
 
-      if (relevantDocs.length > 0) {
-        addActivity(`Processing ${relevantDocs.length} document(s)...`, agentType, "running")
-        await new Promise((resolve) => setTimeout(resolve, 800))
+    if (payrollDocs.length > 0) steps.push({ text: `Payroll Agent: Validating ${payrollDocs.length} document(s)...`, status: "pending" })
+    if (bankingDocs.length > 0) steps.push({ text: `Banking Agent: Validating ${bankingDocs.length} document(s)...`, status: "pending" })
+    if (legalDocs.length > 0) steps.push({ text: `Legal Agent: Validating ${legalDocs.length} document(s)...`, status: "pending" })
+    if (propertyDocs.length > 0) steps.push({ text: `Property Agent: Validating ${propertyDocs.length} document(s)...`, status: "pending" })
 
-        // Check if any will be flagged based on case
-        const willFlag = selectedCaseId === "case-4" || selectedCaseId === "case-6"
-        const flaggedCount = willFlag && agentType === "payroll" ? 1 : 0
-        
-        if (flaggedCount > 0) {
-          updateLastActivity("flagged", `${relevantDocs.length - flaggedCount} valid, ${flaggedCount} flagged`)
-        } else {
-          updateLastActivity("complete", `${relevantDocs.length} document(s) validated`)
-        }
-      }
+    steps.push({ text: "Cross-referencing with statement...", status: "pending" })
+    steps.push({ text: "Calculating plausibility score...", status: "pending" })
+
+    setProcessingSteps(steps)
+    addChatMessage(`Starting validation on ${docsToValidate.length} document(s)...`, "assistant")
+
+    let stepIndex = 0
+
+    // Step 1: Initialize
+    updateStep(stepIndex, "running")
+    await new Promise(r => setTimeout(r, 600))
+    updateStep(stepIndex++, "complete")
+
+    // Payroll Agent
+    if (payrollDocs.length > 0) {
+      updateStep(stepIndex, "running")
+      await new Promise(r => setTimeout(r, 2000))
+      const shouldFlag = selectedCaseId === "case-4"
+      updateStep(stepIndex++, "complete", shouldFlag 
+        ? "1 discrepancy found - salary mismatch" 
+        : "All employment data verified"
+      )
     }
 
-    // Also validate company accounts and investment docs
-    const otherDocs = docsToValidate.filter(d => 
-      ["company_accounts", "investment_statement", "source_of_investment", "business_accounts"].includes(d.type)
-    )
-    if (otherDocs.length > 0) {
-      addActivity(`Processing business/investment documents...`, "banking", "running")
-      await new Promise((resolve) => setTimeout(resolve, 600))
-      updateLastActivity("complete", `${otherDocs.length} document(s) validated`)
+    // Banking Agent  
+    if (bankingDocs.length > 0) {
+      updateStep(stepIndex, "running")
+      await new Promise(r => setTimeout(r, 2200))
+      const shouldFlag = selectedCaseId === "case-6"
+      updateStep(stepIndex++, "complete", shouldFlag
+        ? "Investment timeline flagged"
+        : "Bank transactions verified"
+      )
     }
+
+    // Legal Agent
+    if (legalDocs.length > 0) {
+      updateStep(stepIndex, "running")
+      await new Promise(r => setTimeout(r, 1800))
+      const shouldFlag = selectedCaseId === "case-4" && legalDocs.some(d => d.type === "probate_document")
+      updateStep(stepIndex++, "complete", shouldFlag
+        ? "Inheritance amount discrepancy"
+        : "Legal documents verified"
+      )
+    }
+
+    // Property Agent
+    if (propertyDocs.length > 0) {
+      updateStep(stepIndex, "running")
+      await new Promise(r => setTimeout(r, 1600))
+      updateStep(stepIndex++, "complete", "Property documents verified")
+    }
+
+    // Cross-reference
+    updateStep(stepIndex, "running")
+    await new Promise(r => setTimeout(r, 1200))
+    updateStep(stepIndex++, "complete", "Statement claims matched")
+
+    // Plausibility
+    updateStep(stepIndex, "running")
+    await new Promise(r => setTimeout(r, 800))
+    updateStep(stepIndex++, "complete")
 
     // Update funding sources with validation results
     setFundingSources((prev) =>
       prev.map((source) => ({
         ...source,
         requiredDocuments: source.requiredDocuments.map((doc) => {
-          if (doc.status === "uploaded" && !doc.validationResult) {
-            // Determine if this doc should be flagged based on case
+          if (doc.status === "uploaded" || doc.status === "validated" || doc.status === "flagged") {
             let shouldFlag = false
             if (selectedCaseId === "case-4") {
-              shouldFlag = doc.type === "payslip" || (doc.type === "bank_statement" && source.type === "inheritance")
+              shouldFlag = doc.type === "payslip" || doc.type === "probate_document"
             }
             if (selectedCaseId === "case-6") {
               shouldFlag = doc.type === "investment_statement"
@@ -304,17 +359,17 @@ export default function SOFAgentPage() {
       }))
     )
 
-    addActivity("Validation complete", "orchestrator", "complete")
-
-    const validatedCount = docsToValidate.length
+    const flaggedCount = (selectedCaseId === "case-4" || selectedCaseId === "case-6") ? 1 : 0
     addChatMessage(
-      `Validation complete! ${validatedCount} document(s) processed. Review results in Stage 3.`,
+      flaggedCount > 0 
+        ? `Validation complete. ${flaggedCount} issue(s) flagged for review.`
+        : "Validation complete. All documents verified successfully.",
       "assistant"
     )
 
     setCurrentStage(3)
     setIsProcessing(false)
-  }, [addChatMessage, addActivity, updateLastActivity, fundingSources, selectedCaseId])
+  }, [addChatMessage, fundingSources, selectedCaseId])
 
   const handleRerunAgent = useCallback(
     async (agentType: AgentType, documentId: string) => {
@@ -322,17 +377,31 @@ export default function SOFAgentPage() {
       
       const doc = fundingSources.flatMap(fs => fs.requiredDocuments).find(d => d.id === documentId)
       
-      addActivity(`Re-analyzing ${doc?.name || "document"}...`, agentType, "running")
-      addChatMessage(`Re-running ${agentType} agent with updated parameters...`, "assistant", agentType)
+      setProcessingSteps([
+        { text: `Re-analyzing ${doc?.name || "document"}...`, status: "running" },
+        { text: "Applying updated validation rules...", status: "pending" },
+        { text: "Verifying against statement...", status: "pending" },
+      ])
 
-      await new Promise((resolve) => setTimeout(resolve, 1200))
+      addChatMessage(`Re-running ${agentType} agent...`, "assistant", agentType)
+
+      await new Promise(r => setTimeout(r, 1500))
+      updateStep(0, "complete")
+      updateStep(1, "running")
+      
+      await new Promise(r => setTimeout(r, 1200))
+      updateStep(1, "complete")
+      updateStep(2, "running")
+      
+      await new Promise(r => setTimeout(r, 800))
+      updateStep(2, "complete", "Issue resolved")
 
       setFundingSources((prev) =>
         prev.map((source) => ({
           ...source,
           requiredDocuments: source.requiredDocuments.map((d) => {
             if (d.id === documentId) {
-              const result = generateMockValidationResult(d.type, true) // Re-run tends to pass
+              const result = generateMockValidationResult(d.type, true)
               return {
                 ...d,
                 status: "validated" as const,
@@ -344,32 +413,39 @@ export default function SOFAgentPage() {
         }))
       )
 
-      updateLastActivity("complete", "Document re-validated successfully")
-      addChatMessage(`Re-validation complete. The flag has been resolved.`, "assistant", agentType)
+      addChatMessage("Document re-validated successfully. Flag resolved.", "assistant", agentType)
       setIsProcessing(false)
     },
-    [addChatMessage, addActivity, updateLastActivity, fundingSources]
+    [addChatMessage, fundingSources]
   )
 
   const handleGenerateReport = useCallback(async () => {
     setIsProcessing(true)
     
-    addActivity("Generating audit report...", "orchestrator", "running")
-    addChatMessage("Compiling final audit report...", "assistant")
+    setProcessingSteps([
+      { text: "Compiling validation results...", status: "pending" },
+      { text: "Generating audit trail...", status: "pending" },
+      { text: "Creating compliance summary...", status: "pending" },
+      { text: "Finalizing report...", status: "pending" },
+    ])
 
-    await new Promise((resolve) => setTimeout(resolve, 600))
-    addActivity("Aggregating validation results...", "orchestrator", "running")
-    
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    updateLastActivity("complete")
-    
-    addActivity("Calculating plausibility score...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    updateLastActivity("complete")
+    addChatMessage("Generating audit report...", "assistant")
 
-    addActivity("Generating recommendations...", "orchestrator", "running")
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    updateLastActivity("complete")
+    updateStep(0, "running")
+    await new Promise(r => setTimeout(r, 1000))
+    updateStep(0, "complete")
+
+    updateStep(1, "running")
+    await new Promise(r => setTimeout(r, 800))
+    updateStep(1, "complete")
+
+    updateStep(2, "running")
+    await new Promise(r => setTimeout(r, 1200))
+    updateStep(2, "complete")
+
+    updateStep(3, "running")
+    await new Promise(r => setTimeout(r, 600))
+    updateStep(3, "complete")
 
     const applicantName = selectedCaseId 
       ? EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.applicantName || "Applicant"
@@ -378,100 +454,50 @@ export default function SOFAgentPage() {
     const report = generateMockAuditReport(fundingSources, applicantName)
     setAuditReport(report)
 
-    addActivity("Report generated successfully", "orchestrator", "complete")
-
-    let summaryMsg = `Audit report ready!\n\n`
-    summaryMsg += `- Applicant: ${report.applicantName}\n`
-    summaryMsg += `- Verified: £${report.totalFundsVerified.toLocaleString()}\n`
-    summaryMsg += `- Score: ${report.plausibilityScore}%\n`
-    summaryMsg += `- Status: ${report.overallStatus.toUpperCase()}`
-
-    addChatMessage(summaryMsg, "assistant")
+    addChatMessage(
+      `Report ready. Status: ${report.overallStatus.toUpperCase()}, Score: ${report.plausibilityScore}%`,
+      "assistant"
+    )
 
     setCurrentStage(4)
     setIsProcessing(false)
-  }, [addChatMessage, addActivity, updateLastActivity, fundingSources, selectedCaseId])
-
-  const handleExportPDF = useCallback(() => {
-    addChatMessage("PDF export ready in production. Use Print to save as PDF.", "assistant")
-  }, [addChatMessage])
-
-  const handlePrint = useCallback(() => {
-    window.print()
-  }, [])
+  }, [addChatMessage, fundingSources, selectedCaseId])
 
   const handleSendMessage = useCallback(
     async (message: string) => {
       addChatMessage(message, "user")
       setIsProcessing(true)
 
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      await new Promise(r => setTimeout(r, 600))
 
-      const lowerMessage = message.toLowerCase()
+      const lower = message.toLowerCase()
 
-      if (lowerMessage.includes("flag") || lowerMessage.includes("issue")) {
+      if (lower.includes("flag") || lower.includes("issue")) {
         const flaggedDocs = fundingSources.flatMap((fs) =>
           fs.requiredDocuments.filter((d) => d.status === "flagged")
         )
         if (flaggedDocs.length > 0) {
-          const flagDetails = flaggedDocs.map(d => {
-            const flags = d.validationResult?.flags || []
-            return `**${d.name}:**\n${flags.map(f => `  - [${f.severity.toUpperCase()}] ${f.message}`).join("\n")}`
-          }).join("\n\n")
-          addChatMessage(
-            `${flaggedDocs.length} flagged document(s):\n\n${flagDetails}\n\nRe-run agents to resolve, or upload supporting documents.`,
-            "assistant"
-          )
+          const detail = flaggedDocs.map(d => `• ${d.name}: ${d.validationResult?.flags[0]?.message || "Issue detected"}`).join("\n")
+          addChatMessage(`${flaggedDocs.length} flagged item(s):\n\n${detail}`, "assistant")
         } else {
-          addChatMessage("No flagged items. All validated documents passed.", "assistant")
+          addChatMessage("No flagged items.", "assistant")
         }
-      } else if (lowerMessage.includes("re-run") || lowerMessage.includes("rerun")) {
-        const agents = ["payroll", "banking", "legal", "property"]
-        const mentionedAgent = agents.find((a) => lowerMessage.includes(a))
-        if (mentionedAgent) {
-          addChatMessage(
-            `Click "Re-run" on any ${mentionedAgent} agent document in Stage 3 to re-validate.`,
-            "assistant",
-            mentionedAgent as AgentType
-          )
-        } else {
-          addChatMessage(
-            "Which agent? Options: Payroll, Banking, Legal, Property. Or click Re-run buttons in Stage 3.",
-            "assistant"
-          )
-        }
-      } else if (lowerMessage.includes("missing") || lowerMessage.includes("upload")) {
+      } else if (lower.includes("missing")) {
         const missingDocs = fundingSources.flatMap((fs) =>
           fs.requiredDocuments.filter((d) => d.status === "missing")
         )
         if (missingDocs.length > 0) {
-          addChatMessage(
-            `${missingDocs.length} missing document(s):\n\n${missingDocs.map((d) => `- ${d.name}`).join("\n")}\n\nUpload in Stage 2, then re-run validation.`,
-            "assistant"
-          )
+          addChatMessage(`${missingDocs.length} missing:\n\n${missingDocs.map(d => `• ${d.name}`).join("\n")}`, "assistant")
         } else {
-          addChatMessage("All required documents are uploaded.", "assistant")
+          addChatMessage("All documents uploaded.", "assistant")
         }
-      } else if (lowerMessage.includes("summary") || lowerMessage.includes("status")) {
-        const totalDocs = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.length, 0)
-        const validated = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "validated").length, 0)
-        const flagged = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "flagged").length, 0)
-        const missing = fundingSources.reduce((sum, fs) => sum + fs.requiredDocuments.filter(d => d.status === "missing").length, 0)
-        
-        addChatMessage(
-          `Status: ${fundingSources.length} sources, ${totalDocs} docs\n- Validated: ${validated}\n- Flagged: ${flagged}\n- Missing: ${missing}\n\nStage: ${currentStage}/4`,
-          "assistant"
-        )
       } else {
-        addChatMessage(
-          "I can help with:\n- Explain flags\n- Re-run agents\n- Check missing docs\n- Show summary\n\nOr use the quick buttons below.",
-          "assistant"
-        )
+        addChatMessage("I can help explain flags, check missing docs, or guide you through the process.", "assistant")
       }
 
       setIsProcessing(false)
     },
-    [addChatMessage, fundingSources, currentStage]
+    [addChatMessage, fundingSources]
   )
 
   const handleStageClick = useCallback((stage: WorkflowStage) => {
@@ -480,47 +506,110 @@ export default function SOFAgentPage() {
     }
   }, [currentStage, fundingSources])
 
-  const renderStageContent = () => {
-    switch (currentStage) {
-      case 1:
-        return (
-          <StageStatement
-            statement={statement}
-            onStatementChange={setStatement}
-            onAnalyze={handleAnalyzeStatement}
-            isProcessing={isProcessing}
-          />
-        )
-      case 2:
-        return (
-          <StageChecklist
-            fundingSources={fundingSources}
-            onUploadDocument={handleUploadDocument}
-            onValidateAll={handleValidateAll}
-            isProcessing={isProcessing}
-            statement={statement}
-          />
-        )
-      case 3:
-        return (
-          <StageAgents
-            fundingSources={fundingSources}
-            onRerunAgent={handleRerunAgent}
-            onGenerateReport={handleGenerateReport}
-            isProcessing={isProcessing}
-          />
-        )
-      case 4:
-        return auditReport ? (
-          <StageReport
-            report={auditReport}
-            onExportPDF={handleExportPDF}
-            onPrint={handlePrint}
-          />
-        ) : null
-      default:
-        return null
+  // Render document card
+  const renderDocCard = (doc: RequiredDocument, sourceId: string) => {
+    const statusColors = {
+      missing: "border-destructive/30 bg-destructive/5",
+      uploaded: "border-amber-500/30 bg-amber-500/5",
+      validated: "border-green-600/30 bg-green-600/5",
+      flagged: "border-destructive/30 bg-destructive/5",
     }
+
+    const statusIcons = {
+      missing: <XCircle className="w-4 h-4 text-destructive" />,
+      uploaded: <Clock className="w-4 h-4 text-amber-600" />,
+      validated: <CheckCircle2 className="w-4 h-4 text-green-600" />,
+      flagged: <AlertTriangle className="w-4 h-4 text-destructive" />,
+    }
+
+    return (
+      <div key={doc.id} className={cn("p-3 rounded-lg border", statusColors[doc.status])}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            {statusIcons[doc.status]}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm text-foreground">{doc.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+            </div>
+          </div>
+          {doc.status === "missing" && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="shrink-0 h-7 text-xs"
+              onClick={() => handleUploadDocument(sourceId, doc.id)}
+              disabled={isProcessing}
+            >
+              <Upload className="w-3 h-3 mr-1" />
+              Upload
+            </Button>
+          )}
+          {doc.status === "flagged" && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="shrink-0 h-7 text-xs"
+              onClick={() => handleRerunAgent(doc.validationResult?.agentType || "banking", doc.id)}
+              disabled={isProcessing}
+            >
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Re-run
+            </Button>
+          )}
+        </div>
+        
+        {/* Validation result details */}
+        {doc.validationResult && currentStage >= 3 && (
+          <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+            <div className="flex items-center gap-2 text-xs">
+              <Bot className="w-3 h-3 text-primary" />
+              <span className="text-muted-foreground">{doc.validationResult.agentType} agent</span>
+            </div>
+            
+            {/* Extracted data */}
+            {doc.validationResult.extractedData.length > 0 && (
+              <div className="grid grid-cols-2 gap-1">
+                {doc.validationResult.extractedData.slice(0, 4).map((item, i) => (
+                  <div key={i} className="text-xs">
+                    <span className="text-muted-foreground">{item.label}:</span>{" "}
+                    <span className="font-medium text-foreground">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Matches */}
+            {doc.validationResult.matches.length > 0 && (
+              <div className="space-y-1">
+                {doc.validationResult.matches.map((match, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    {match.status === "match" && <CheckCircle2 className="w-3 h-3 text-green-600" />}
+                    {match.status === "mismatch" && <XCircle className="w-3 h-3 text-destructive" />}
+                    {match.status === "partial" && <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                    <span className="text-muted-foreground truncate">{match.statementClaim}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Flags */}
+            {doc.validationResult.flags.length > 0 && (
+              <div className="space-y-1">
+                {doc.validationResult.flags.map((flag, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs bg-destructive/10 p-2 rounded">
+                    <AlertTriangle className="w-3 h-3 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-destructive">{flag.message}</p>
+                      <p className="text-muted-foreground mt-0.5">{flag.recommendation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -534,21 +623,15 @@ export default function SOFAgentPage() {
                 <span className="text-primary-foreground font-bold">N</span>
               </div>
               <div>
-                <h1 className="text-base font-semibold text-foreground">
-                  Source of Funds Agent
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  AI-Powered Compliance Verification
-                </p>
+                <h1 className="text-base font-semibold text-foreground">Source of Funds Agent</h1>
+                <p className="text-xs text-muted-foreground">AML/KYC Compliance Verification</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {selectedCaseId && (
-                <span className="text-xs bg-accent px-2 py-1 rounded text-foreground">
-                  {EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.name}
-                </span>
-              )}
-            </div>
+            {selectedCaseId && (
+              <Badge variant="secondary" className="text-xs">
+                {EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.name}
+              </Badge>
+            )}
           </div>
         </div>
       </header>
@@ -556,29 +639,287 @@ export default function SOFAgentPage() {
       {/* Stage Indicator */}
       <div className="border-b border-border bg-card/50 py-4 print:hidden">
         <div className="container mx-auto px-4">
-          <StageIndicator
-            currentStage={currentStage}
-            onStageClick={handleStageClick}
-          />
+          <StageIndicator currentStage={currentStage} onStageClick={handleStageClick} />
         </div>
       </div>
 
-      {/* Main Content - 3 Column Layout */}
-      <main className="container mx-auto px-4 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Stage Content - Main Area */}
-          <div className="lg:col-span-6 xl:col-span-7">{renderStageContent()}</div>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Main Workflow Area */}
+          <div className="lg:col-span-2 space-y-6" ref={contentRef}>
+            
+            {/* Stage 1: Case Selection */}
+            {currentStage === 1 && (
+              <Card>
+                <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary" />
+                    Select Example Case
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Choose a case to begin. The agent will analyze the applicant&apos;s statement and check uploaded documents.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {EXAMPLE_CASES.map((caseItem) => (
+                      <button
+                        key={caseItem.id}
+                        onClick={() => handleSelectCase(caseItem.id)}
+                        disabled={isProcessing}
+                        className={cn(
+                          "text-left p-4 rounded-lg border transition-all",
+                          "hover:border-primary/50 hover:bg-accent/30",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                          selectedCaseId === caseItem.id && isProcessing && "border-primary bg-primary/10"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className={cn(
+                            "text-xs",
+                            caseItem.complexity === "Simple" && "border-green-600 text-green-600",
+                            caseItem.complexity === "Moderate" && "border-amber-600 text-amber-600",
+                            caseItem.complexity === "Complex" && "border-red-600 text-red-600",
+                          )}>
+                            {caseItem.complexity}
+                          </Badge>
+                          {selectedCaseId === caseItem.id && isProcessing ? (
+                            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <h4 className="font-medium text-sm text-foreground">{caseItem.name}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{caseItem.description}</p>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                          <FileCheck className="w-3 h-3" />
+                          {caseItem.scenario}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Agent Activity Feed */}
-          <div className="lg:col-span-3 xl:col-span-2 h-[calc(100vh-220px)] min-h-[400px] print:hidden">
-            <AgentActivityFeed 
-              activities={agentActivities} 
-              isProcessing={isProcessing} 
-            />
+            {/* Processing Steps (shown when processing) */}
+            {isProcessing && processingSteps.length > 0 && (
+              <Card>
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Agent Processing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="py-2">
+                  {processingSteps.map((step, i) => (
+                    <ProcessingStep key={i} text={step.text} status={step.status} detail={step.detail} />
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Statement Preview (Stage 2+) */}
+            {currentStage >= 2 && statement && (
+              <Card className="border-primary/20">
+                <CardHeader className="py-3 bg-primary/5">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    Applicant Statement
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="py-3">
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{statement}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Stage 2 & 3: Document Checklist with Validation */}
+            {(currentStage === 2 || currentStage === 3) && fundingSources.length > 0 && (
+              <div className="space-y-4">
+                {fundingSources.map((source) => {
+                  const SourceIcon = sourceIcons[source.type] || FileText
+                  const uploadedCount = source.requiredDocuments.filter(d => d.status !== "missing").length
+                  const totalCount = source.requiredDocuments.length
+                  
+                  return (
+                    <Card key={source.id}>
+                      <CardHeader className="py-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <SourceIcon className="w-4 h-4 text-primary" />
+                            {source.description}
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              £{source.amount.toLocaleString()}
+                            </span>
+                            <Badge variant={uploadedCount === totalCount ? "default" : "secondary"} className="text-xs">
+                              {uploadedCount}/{totalCount}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="py-3 space-y-2">
+                        {source.requiredDocuments.map(doc => renderDocCard(doc, source.id))}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+
+                {/* Action Button */}
+                {currentStage === 2 && (
+                  <Button
+                    onClick={handleValidateAll}
+                    disabled={isProcessing || fundingSources.every(fs => fs.requiredDocuments.every(d => d.status === "missing"))}
+                    className="w-full"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Run Validation Agents
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {currentStage === 3 && (
+                  <Button
+                    onClick={handleGenerateReport}
+                    disabled={isProcessing}
+                    className="w-full"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileCheck className="w-4 h-4 mr-2" />
+                        Generate Audit Report
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Stage 4: Audit Report */}
+            {currentStage === 4 && auditReport && (
+              <Card className="print:shadow-none">
+                <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 print:bg-white">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Audit Report</CardTitle>
+                    <div className="flex items-center gap-2 print:hidden">
+                      <Button size="sm" variant="outline" onClick={() => window.print()}>
+                        <Printer className="w-4 h-4 mr-1" />
+                        Print
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Download className="w-4 h-4 mr-1" />
+                        Export
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="py-4 space-y-6">
+                  {/* Summary */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-accent/30">
+                      <p className="text-2xl font-bold text-primary">{auditReport.plausibilityScore}%</p>
+                      <p className="text-xs text-muted-foreground">Plausibility</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-accent/30">
+                      <p className="text-2xl font-bold text-foreground">£{(auditReport.totalFundsVerified / 1000).toFixed(0)}k</p>
+                      <p className="text-xs text-muted-foreground">Verified</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-accent/30">
+                      <p className="text-2xl font-bold text-green-600">{auditReport.validationSummary.validatedDocuments}</p>
+                      <p className="text-xs text-muted-foreground">Validated</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-accent/30">
+                      <p className={cn(
+                        "text-2xl font-bold",
+                        auditReport.validationSummary.flaggedDocuments > 0 ? "text-destructive" : "text-green-600"
+                      )}>
+                        {auditReport.validationSummary.flaggedDocuments}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Flagged</p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center justify-center p-4 rounded-lg border">
+                    <Badge className={cn(
+                      "text-lg px-4 py-1",
+                      auditReport.overallStatus === "approved" && "bg-green-600",
+                      auditReport.overallStatus === "flagged" && "bg-destructive",
+                      auditReport.overallStatus === "pending" && "bg-amber-600",
+                    )}>
+                      {auditReport.overallStatus.toUpperCase()}
+                    </Badge>
+                  </div>
+
+                  {/* Flagged Items */}
+                  {auditReport.flaggedItems.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                        Items Requiring Review
+                      </h4>
+                      {auditReport.flaggedItems.map((item, i) => (
+                        <div key={i} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+                          <p className="text-sm font-medium text-foreground">{item.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{item.recommendation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {auditReport.notes && auditReport.notes.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Analyst Notes</h4>
+                      <ul className="space-y-1">
+                        {auditReport.notes.map((note, i) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="text-primary">•</span>
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Audit Trail */}
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm">Audit Trail</h4>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {auditReport.auditTrail.map((item, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-muted-foreground/60">
+                            {new Date(item.timestamp).toLocaleTimeString()}
+                          </span>
+                          <span>{item.action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Chat Panel */}
-          <div className="lg:col-span-3 h-[calc(100vh-220px)] min-h-[400px] print:hidden">
+          <div className="lg:col-span-1 h-[calc(100vh-200px)] min-h-[500px] sticky top-4 print:hidden">
             <ChatPanel
               messages={chatMessages}
               onSendMessage={handleSendMessage}

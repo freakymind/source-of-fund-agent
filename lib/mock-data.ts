@@ -13,7 +13,7 @@ import type {
 export interface ExampleCase {
   id: string
   name: string
-  complexity: "simple" | "moderate" | "complex"
+  complexity: "Simple" | "Moderate" | "Complex"
   description: string
   scenario: string // describes doc status scenario
   statement: string
@@ -25,7 +25,7 @@ export const EXAMPLE_CASES: ExampleCase[] = [
   {
     id: "case-1",
     name: "Simple Employment Only",
-    complexity: "simple",
+    complexity: "Simple",
     description: "Single funding source with all documents present",
     scenario: "All documents uploaded and validated successfully",
     applicantName: "Sarah Johnson",
@@ -41,7 +41,7 @@ The loan will be repaid from my regular monthly salary.`,
   {
     id: "case-2",
     name: "Savings Only - Missing Statement",
-    complexity: "simple",
+    complexity: "Simple",
     description: "Single savings source with one document missing",
     scenario: "Savings certificate uploaded but bank statement missing",
     applicantName: "Michael Chen",
@@ -57,7 +57,7 @@ These funds are from my personal savings account.`,
   {
     id: "case-3",
     name: "Employment + Gift",
-    complexity: "moderate",
+    complexity: "Moderate",
     description: "Two funding sources with complete documentation",
     scenario: "All documents present and validation passed",
     applicantName: "Emma Williams",
@@ -74,7 +74,7 @@ Total deposit contribution: £45,000 including my savings.`,
   {
     id: "case-4",
     name: "Employment + Inheritance - Flagged",
-    complexity: "moderate",
+    complexity: "Moderate",
     description: "Two sources with documents present but plausibility issues",
     scenario: "Documents uploaded but inconsistencies detected",
     applicantName: "David Thompson",
@@ -91,7 +91,7 @@ I will use the inheritance for the deposit and employment income for repayments.
   {
     id: "case-5",
     name: "Complex Multi-Source - Partial Docs",
-    complexity: "complex",
+    complexity: "Complex",
     description: "Four funding sources with some documents pending",
     scenario: "Most documents present, 2 still missing, validation partial",
     applicantName: "Robert Anderson",
@@ -110,7 +110,7 @@ The total funds available are approximately £380,000 for the deposit and associ
   {
     id: "case-6",
     name: "Complex Multi-Source - Mixed Results",
-    complexity: "complex",
+    complexity: "Complex",
     description: "Four funding sources with all docs but mixed validation results",
     scenario: "All documents uploaded, most valid, some flagged for review",
     applicantName: "Jennifer Martinez",
