@@ -71,6 +71,47 @@ export function StageStatement({
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
+          {/* Custom Statement Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Custom Applicant Statement
+            </label>
+            <Textarea
+              placeholder="Paste the applicant's source of funds statement here..."
+              value={statement}
+              onChange={(e) => onStatementChange(e.target.value)}
+              className="min-h-[150px] resize-none"
+              disabled={isProcessing}
+            />
+          </div>
+
+          <Button
+            onClick={() => onAnalyze()}
+            disabled={!statement.trim() || isProcessing}
+            className="bg-primary hover:bg-primary/90"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Analyze Custom Statement
+              </>
+            )}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or try example cases</span>
+            </div>
+          </div>
+
           {/* Example Cases Grid */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-foreground">Example Cases (6 scenarios with varying complexity)</h4>
@@ -112,47 +153,6 @@ export function StageStatement({
               })}
             </div>
           </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or enter custom statement</span>
-            </div>
-          </div>
-
-          {/* Custom Statement Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Custom Applicant Statement
-            </label>
-            <Textarea
-              placeholder="Paste the applicant's source of funds statement here..."
-              value={statement}
-              onChange={(e) => onStatementChange(e.target.value)}
-              className="min-h-[150px] resize-none"
-              disabled={isProcessing}
-            />
-          </div>
-
-          <Button
-            onClick={() => onAnalyze()}
-            disabled={!statement.trim() || isProcessing}
-            className="bg-primary hover:bg-primary/90"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Analyze Custom Statement
-              </>
-            )}
-          </Button>
         </CardContent>
       </Card>
 
