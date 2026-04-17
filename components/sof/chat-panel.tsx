@@ -100,7 +100,7 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
                       {message.agentType} Agent
                     </Badge>
                   )}
-                  <span>{formatTime(message.timestamp)}</span>
+                  <span suppressHydrationWarning>{formatTime(message.timestamp)}</span>
                 </div>
               </div>
             </div>

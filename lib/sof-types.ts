@@ -19,7 +19,15 @@ export interface FundingSource {
   description: string
   amount: number
   currency: string
+  statementExcerpt: string // The exact text from user statement that triggered this source
+  claimsToVerify: ClaimToVerify[] // Specific claims extracted from statement
   requiredDocuments: RequiredDocument[]
+}
+
+export interface ClaimToVerify {
+  claim: string // e.g., "Saved £10,000 over 2 years"
+  extractedValue: string | number // e.g., "£10,000" or 10000
+  verificationType: "amount" | "duration" | "identity" | "ownership" | "relationship"
 }
 
 export interface RequiredDocument {
@@ -66,6 +74,18 @@ export interface ValidationResult {
   matches: MatchItem[]
   flags: FlagItem[]
   summary: string
+  plausibilityAnalysis?: PlausibilityAnalysis
+}
+
+export interface PlausibilityAnalysis {
+  conclusion: "plausible" | "questionable" | "implausible"
+  reasoning: string[]
+  calculations?: {
+    label: string
+    formula: string
+    result: string
+    assessment: "supports" | "neutral" | "contradicts"
+  }[]
 }
 
 export type AgentType = "payroll" | "banking" | "legal" | "property"
@@ -80,6 +100,7 @@ export interface MatchItem {
   statementClaim: string
   documentEvidence: string
   status: "match" | "partial" | "mismatch"
+  analysis?: string // Detailed reasoning for the match/mismatch
 }
 
 export interface FlagItem {

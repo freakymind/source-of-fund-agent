@@ -175,6 +175,29 @@ export function StageChecklist({
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="border-t border-border/50 p-4 space-y-4">
+                      {/* Statement Excerpt for this source */}
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        <p className="text-xs font-semibold text-primary mb-2 flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          From Applicant Statement:
+                        </p>
+                        <p className="text-sm text-foreground italic">&quot;{source.statementExcerpt}&quot;</p>
+                        
+                        {source.claimsToVerify && source.claimsToVerify.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-primary/20">
+                            <p className="text-xs font-semibold text-primary mb-2">Claims to Verify:</p>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                              {source.claimsToVerify.map((claim, i) => (
+                                <li key={i} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                  {claim.claim}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+
                       {source.requiredDocuments.map((doc) => (
                         <div
                           key={doc.id}

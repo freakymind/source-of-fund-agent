@@ -14,6 +14,7 @@ import {
   Building2,
   User,
   RefreshCw,
+  Calculator,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -118,7 +119,7 @@ function ValidationResultCard({
         <div>
           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-success" />
-            Statement Matches
+            Statement vs Document Verification
           </h4>
           <div className="space-y-2">
             {result.matches.map((match, i) => (
@@ -130,30 +131,98 @@ function ValidationResultCard({
                   {getMatchIcon(match.status)}
                   <div className="flex-1">
                     <p className="text-sm">
-                      <span className="text-muted-foreground">Claim:</span>{" "}
-                      <span className="font-medium text-foreground">{match.statementClaim}</span>
+                      <span className="text-muted-foreground">Statement says:</span>{" "}
+                      <span className="font-medium text-foreground">&quot;{match.statementClaim}&quot;</span>
                     </p>
                     <p className="text-sm">
-                      <span className="text-muted-foreground">Evidence:</span>{" "}
+                      <span className="text-muted-foreground">Document shows:</span>{" "}
                       <span className="text-foreground">{match.documentEvidence}</span>
                     </p>
+                    {match.analysis && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        Analysis: {match.analysis}
+                      </p>
+                    )}
                   </div>
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-xs",
+                      "text-xs flex-shrink-0",
                       match.status === "match" && "border-success text-success",
                       match.status === "partial" && "border-warning text-warning",
                       match.status === "mismatch" && "border-destructive text-destructive"
                     )}
                   >
-                    {match.status}
+                    {match.status === "match" ? "VERIFIED" : match.status === "partial" ? "PARTIAL" : "MISMATCH"}
                   </Badge>
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Plausibility Analysis */}
+        {result.plausibilityAnalysis && (
+          <div>
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Scale className="w-4 h-4 text-primary" />
+              Plausibility Analysis
+            </h4>
+            <div className={cn(
+              "p-4 rounded border",
+              result.plausibilityAnalysis.conclusion === "plausible" && "bg-success/10 border-success/30",
+              result.plausibilityAnalysis.conclusion === "questionable" && "bg-warning/10 border-warning/30",
+              result.plausibilityAnalysis.conclusion === "implausible" && "bg-destructive/10 border-destructive/30"
+            )}>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge className={cn(
+                  result.plausibilityAnalysis.conclusion === "plausible" && "bg-success",
+                  result.plausibilityAnalysis.conclusion === "questionable" && "bg-warning",
+                  result.plausibilityAnalysis.conclusion === "implausible" && "bg-destructive"
+                )}>
+                  {result.plausibilityAnalysis.conclusion.toUpperCase()}
+                </Badge>
+              </div>
+              
+              <div className="space-y-2 mb-3">
+                {result.plausibilityAnalysis.reasoning.map((reason, i) => (
+                  <p key={i} className="text-sm text-foreground flex items-start gap-2">
+                    <span className={cn(
+                      "w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0",
+                      result.plausibilityAnalysis?.conclusion === "plausible" && "bg-success",
+                      result.plausibilityAnalysis?.conclusion === "questionable" && "bg-warning",
+                      result.plausibilityAnalysis?.conclusion === "implausible" && "bg-destructive"
+                    )} />
+                    {reason}
+                  </p>
+                ))}
+              </div>
+
+              {result.plausibilityAnalysis.calculations && result.plausibilityAnalysis.calculations.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <p className="text-xs font-medium text-primary mb-2">Calculations:</p>
+                  <div className="grid gap-2">
+                    {result.plausibilityAnalysis.calculations.map((calc, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs bg-background/50 p-2 rounded">
+                        <span className="text-muted-foreground">{calc.label}:</span>
+                        <span className="font-mono text-foreground">{calc.formula}</span>
+                        <span className="font-medium text-foreground">{calc.result}</span>
+                        <Badge variant="outline" className={cn(
+                          "text-xs",
+                          calc.assessment === "supports" && "border-success text-success",
+                          calc.assessment === "neutral" && "border-muted-foreground text-muted-foreground",
+                          calc.assessment === "contradicts" && "border-destructive text-destructive"
+                        )}>
+                          {calc.assessment === "supports" ? "Supports" : calc.assessment === "neutral" ? "Neutral" : "Contradicts"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Flags */}
         {result.flags.length > 0 && (
