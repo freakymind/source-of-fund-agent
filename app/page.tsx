@@ -650,10 +650,6 @@ export default function SOFAgentPage() {
           {/* Main Workflow Area */}
           <div className="lg:col-span-2 space-y-6" ref={contentRef}>
             
-            {/* Stage 1: Case Selection */}
-            {currentStage === 1 && (
-            )}
-
             {/* Processing Steps (shown when processing) */}
             {isProcessing && processingSteps.length > 0 && (
               <Card>
