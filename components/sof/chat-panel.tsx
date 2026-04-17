@@ -41,8 +41,8 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
     }).format(date)
 
   return (
-    <Card className="flex flex-col h-full border-primary/20">
-      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5">
+    <Card className="flex flex-col h-full border-primary/20 overflow-hidden">
+      <div className="p-4 border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 flex-shrink-0">
         <h3 className="font-semibold flex items-center gap-2 text-foreground">
           <Bot className="w-5 h-5 text-primary" />
           SOF Agent Assistant
@@ -52,8 +52,8 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
         </p>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="space-y-4 p-4">
           {messages.map((message, index) => (
             <div
               key={message.id}
@@ -126,7 +126,7 @@ export function ChatPanel({ messages, onSendMessage, isProcessing }: ChatPanelPr
         </div>
       </ScrollArea>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-border flex-shrink-0">
         <div className="flex gap-2">
           <Input
             value={input}

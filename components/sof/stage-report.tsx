@@ -385,6 +385,106 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                   const isFinalAssessment = note.startsWith("FINAL ASSESSMENT:")
                   const isSource = note.startsWith("SOURCE")
                   
+                  // Function to format note content with highlighting
+                  const formatNoteContent = (content: string) => {
+                    // Split by lines and format each
+                    return content.split("\n").map((line, lineIndex) => {
+                      // Highlight specific patterns
+                      if (line.startsWith("Statement Excerpt:")) {
+                        return (
+                          <div key={lineIndex} className="mb-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r">
+                            <span className="font-semibold text-yellow-800">Statement Excerpt:</span>
+                            <p className="italic text-foreground mt-1">{line.replace("Statement Excerpt:", "").trim()}</p>
+                          </div>
+                        )
+                      }
+                      if (line.includes("[VERIFIED]")) {
+                        return (
+                          <div key={lineIndex} className="flex items-start gap-2 py-1">
+                            <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                            <span className="text-foreground">{line.replace("[VERIFIED]", "").replace("- ", "")}</span>
+                          </div>
+                        )
+                      }
+                      if (line.includes("[PARTIAL]")) {
+                        return (
+                          <div key={lineIndex} className="flex items-start gap-2 py-1">
+                            <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+                            <span className="text-foreground">{line.replace("[PARTIAL]", "").replace("- ", "")}</span>
+                          </div>
+                        )
+                      }
+                      if (line.includes("[MISMATCH]")) {
+                        return (
+                          <div key={lineIndex} className="flex items-start gap-2 py-1">
+                            <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                            <span className="text-destructive">{line.replace("[MISMATCH]", "").replace("- ", "")}</span>
+                          </div>
+                        )
+                      }
+                      if (line.startsWith("CONCLUSION:")) {
+                        const isFullyVerified = line.includes("FULLY VERIFIED")
+                        const requiresReview = line.includes("REQUIRES REVIEW")
+                        return (
+                          <div key={lineIndex} className={cn(
+                            "mt-3 p-3 rounded font-medium",
+                            isFullyVerified && "bg-success/10 text-success border border-success/30",
+                            requiresReview && "bg-warning/10 text-warning border border-warning/30",
+                            !isFullyVerified && !requiresReview && "bg-destructive/10 text-destructive border border-destructive/30"
+                          )}>
+                            {line}
+                          </div>
+                        )
+                      }
+                      if (line.startsWith("Extracted Data:")) {
+                        return (
+                          <div key={lineIndex} className="py-1 px-2 bg-accent/50 rounded text-xs font-mono my-1">
+                            <span className="font-semibold text-primary">Extracted:</span> {line.replace("Extracted Data:", "").trim()}
+                          </div>
+                        )
+                      }
+                      if (line.startsWith("Plausibility:")) {
+                        const isPlausible = line.includes("PLAUSIBLE")
+                        const isQuestionable = line.includes("QUESTIONABLE")
+                        return (
+                          <div key={lineIndex} className={cn(
+                            "py-1 px-2 rounded text-xs my-1",
+                            isPlausible && "bg-success/10 text-success",
+                            isQuestionable && "bg-warning/10 text-warning",
+                            !isPlausible && !isQuestionable && "bg-destructive/10 text-destructive"
+                          )}>
+                            {line}
+                          </div>
+                        )
+                      }
+                      if (line.includes("FLAG") && line.includes("):")) {
+                        return (
+                          <div key={lineIndex} className="flex items-start gap-2 py-1 px-2 bg-destructive/10 rounded my-1">
+                            <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                            <span className="text-destructive text-xs">{line}</span>
+                          </div>
+                        )
+                      }
+                      if (line.startsWith("[") && line.includes("]")) {
+                        const docName = line.match(/\[([^\]]+)\]/)?.[1] || ""
+                        const status = line.split(" - ")[1]?.trim() || ""
+                        return (
+                          <div key={lineIndex} className="flex items-center gap-2 py-2 mt-2 border-b border-border/30">
+                            <Badge variant="outline" className="text-xs">{docName}</Badge>
+                            <Badge className={cn(
+                              "text-xs",
+                              status === "VALIDATED" && "bg-success",
+                              status === "FLAGGED" && "bg-destructive",
+                              status === "MISSING" && "bg-muted"
+                            )}>{status}</Badge>
+                          </div>
+                        )
+                      }
+                      if (line.trim() === "") return <div key={lineIndex} className="h-2" />
+                      return <p key={lineIndex} className="text-foreground/80 text-sm py-0.5">{line}</p>
+                    })
+                  }
+                  
                   return (
                     <div 
                       key={i} 
@@ -400,23 +500,29 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                       {isFinalAssessment ? (
                         <div>
                           <Badge className="bg-primary mb-3">Final Assessment</Badge>
-                          <pre className="whitespace-pre-wrap font-sans text-foreground leading-relaxed text-sm">
-                            {note.replace("FINAL ASSESSMENT: ", "")}
-                          </pre>
+                          <div className="mt-2 space-y-2 text-foreground leading-relaxed">
+                            {note.replace("FINAL ASSESSMENT: ", "").split("\n\n").map((para, pIndex) => (
+                              <p key={pIndex} className={cn(
+                                "text-sm",
+                                para.startsWith("Total funds verified") && "font-semibold text-success",
+                                para.startsWith("Recommendation") && "italic text-muted-foreground"
+                              )}>{para}</p>
+                            ))}
+                          </div>
                         </div>
                       ) : isSource ? (
                         <div>
                           <Badge variant="outline" className="border-primary text-primary mb-3">
                             {note.split("\n")[0]}
                           </Badge>
-                          <pre className="whitespace-pre-wrap font-sans text-foreground/90 leading-relaxed text-xs mt-2">
-                            {note.split("\n").slice(1).join("\n")}
-                          </pre>
+                          <div className="mt-2">
+                            {formatNoteContent(note.split("\n").slice(1).join("\n"))}
+                          </div>
                         </div>
                       ) : (
-                        <pre className="whitespace-pre-wrap font-sans text-foreground leading-relaxed text-sm">
-                          {note}
-                        </pre>
+                        <div className="text-foreground leading-relaxed">
+                          {formatNoteContent(note)}
+                        </div>
                       )}
                     </div>
                   )
