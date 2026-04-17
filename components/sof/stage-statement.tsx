@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,8 +45,10 @@ export function StageStatement({
   onAnalyze,
   isProcessing,
 }: StageStatementProps) {
+  const [selectedCasePreview, setSelectedCasePreview] = useState<ExampleCase | null>(null)
 
   const handleSelectCase = (caseItem: ExampleCase) => {
+    setSelectedCasePreview(caseItem)
     onStatementChange(caseItem.statement)
     // Trigger analyze with the case ID
     setTimeout(() => onAnalyze(caseItem.id), 100)
@@ -72,30 +75,41 @@ export function StageStatement({
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-foreground">Example Cases (6 scenarios with varying complexity)</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {EXAMPLE_CASES.map((caseItem) => (
-                <button
-                  key={caseItem.id}
-                  onClick={() => handleSelectCase(caseItem)}
-                  disabled={isProcessing}
-                  className="group text-left p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-accent/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={getComplexityColor(caseItem.complexity)}>
-                        {caseItem.complexity}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">#{caseItem.id.split("-")[1]}</span>
+              {EXAMPLE_CASES.map((caseItem) => {
+                const isSelected = selectedCasePreview?.id === caseItem.id && isProcessing
+                return (
+                  <button
+                    key={caseItem.id}
+                    onClick={() => handleSelectCase(caseItem)}
+                    disabled={isProcessing}
+                    className={`group text-left p-4 rounded-lg border transition-all disabled:cursor-not-allowed ${
+                      isSelected 
+                        ? "border-primary bg-primary/10 ring-2 ring-primary/30" 
+                        : "border-border hover:border-primary/50 hover:bg-accent/30 disabled:opacity-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={getComplexityColor(caseItem.complexity)}>
+                          {caseItem.complexity}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">#{caseItem.id.split("-")[1]}</span>
+                      </div>
+                      {isSelected ? (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      )}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <h5 className="font-medium text-foreground mb-1">{caseItem.name}</h5>
-                  <p className="text-xs text-muted-foreground mb-2">{caseItem.description}</p>
-                  <div className="flex items-center gap-2 text-xs">
-                    {getScenarioIcon(caseItem.scenario)}
-                    <span className="text-muted-foreground">{caseItem.scenario}</span>
-                  </div>
-                </button>
-              ))}
+                    <h5 className="font-medium text-foreground mb-1">{caseItem.name}</h5>
+                    <p className="text-xs text-muted-foreground mb-2">{caseItem.description}</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      {getScenarioIcon(caseItem.scenario)}
+                      <span className="text-muted-foreground">{caseItem.scenario}</span>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
 

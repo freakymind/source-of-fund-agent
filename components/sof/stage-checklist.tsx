@@ -29,6 +29,7 @@ interface StageChecklistProps {
   onUploadDocument: (sourceId: string, documentId: string) => void
   onValidateAll: () => void
   isProcessing: boolean
+  statement?: string
 }
 
 const sourceIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -74,6 +75,7 @@ export function StageChecklist({
   onUploadDocument,
   onValidateAll,
   isProcessing,
+  statement,
 }: StageChecklistProps) {
   const [openSources, setOpenSources] = useState<string[]>(
     fundingSources.map((fs) => fs.id)
@@ -102,7 +104,17 @@ export function StageChecklist({
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Statement Preview */}
+      {statement && (
+        <Card className="border-border/50 bg-accent/20">
+          <CardContent className="pt-4 pb-3">
+            <p className="text-xs font-medium text-primary mb-2">Applicant Statement (excerpt)</p>
+            <p className="text-sm text-muted-foreground line-clamp-3">{statement}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="border-primary/20">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-t-lg">
           <div className="flex items-center justify-between">
