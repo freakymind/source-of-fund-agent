@@ -1310,6 +1310,7 @@ export function generateAuditReport(
     notes.push(`ASSESSMENT: Verification has identified ${flaggedDocs} item(s) requiring further review. While some sources are verified, the flagged items should be addressed before final approval. Recommend requesting additional clarification or documentation for flagged items.`)
   } else {
     notes.push(`ASSESSMENT: Verification incomplete. ${pendingDocs} required document(s) have not been submitted. Full source of funds assessment cannot be completed until all documentation is provided.`)
+  }
 
   return {
     id: `audit-${Date.now()}`,
