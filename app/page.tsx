@@ -451,7 +451,7 @@ export default function SOFAgentPage() {
       ? EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.applicantName || "Applicant"
       : "Applicant"
     
-    const report = generateMockAuditReport(fundingSources, applicantName)
+    const report = generateMockAuditReport(applicantName, fundingSources)
     setAuditReport(report)
 
     addChatMessage(
