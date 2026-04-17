@@ -373,21 +373,38 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </Card>
           )}
 
-          {/* Analyst Notes */}
+          {/* AI Agent Analysis Summary */}
           {report.notes && report.notes.length > 0 && (
-            <Card className="p-4 border-primary/30 bg-primary/5">
-              <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary">
+            <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+              <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary text-lg">
                 <FileText className="w-5 h-5" />
-                Analyst Notes &amp; Recommendations
+                AI Agent Analysis Summary
               </h3>
-              <ul className="space-y-2">
-                {report.notes.map((note, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                    <span className="text-primary mt-0.5">•</span>
-                    {note}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-4">
+                {report.notes.map((note, i) => {
+                  const isAssessment = note.startsWith("ASSESSMENT:")
+                  return (
+                    <div 
+                      key={i} 
+                      className={cn(
+                        "p-4 rounded-lg text-sm leading-relaxed",
+                        isAssessment 
+                          ? "bg-white border-2 border-primary/30 text-foreground font-medium" 
+                          : "bg-white/50 border border-border/50 text-foreground"
+                      )}
+                    >
+                      {isAssessment ? (
+                        <div>
+                          <Badge className="bg-primary mb-2">Final Assessment</Badge>
+                          <p className="mt-2">{note.replace("ASSESSMENT: ", "")}</p>
+                        </div>
+                      ) : (
+                        <p>{note}</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </Card>
           )}
 
