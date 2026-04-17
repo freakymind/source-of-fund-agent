@@ -373,33 +373,50 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </Card>
           )}
 
-          {/* AI Agent Analysis Summary */}
+          {/* AI Agent Detailed Analysis */}
           {report.notes && report.notes.length > 0 && (
             <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
               <h3 className="font-semibold mb-4 flex items-center gap-2 text-primary text-lg">
                 <FileText className="w-5 h-5" />
-                AI Agent Analysis Summary
+                AI Agent Detailed Analysis
               </h3>
               <div className="space-y-4">
                 {report.notes.map((note, i) => {
-                  const isAssessment = note.startsWith("ASSESSMENT:")
+                  const isFinalAssessment = note.startsWith("FINAL ASSESSMENT:")
+                  const isSource = note.startsWith("SOURCE")
+                  
                   return (
                     <div 
                       key={i} 
                       className={cn(
-                        "p-4 rounded-lg text-sm leading-relaxed",
-                        isAssessment 
-                          ? "bg-white border-2 border-primary/30 text-foreground font-medium" 
-                          : "bg-white/50 border border-border/50 text-foreground"
+                        "rounded-lg text-sm",
+                        isFinalAssessment 
+                          ? "p-5 bg-white border-2 border-primary/40 shadow-sm" 
+                          : isSource
+                            ? "p-4 bg-white/70 border border-border/60"
+                            : "p-4 bg-white/50 border border-border/50"
                       )}
                     >
-                      {isAssessment ? (
+                      {isFinalAssessment ? (
                         <div>
-                          <Badge className="bg-primary mb-2">Final Assessment</Badge>
-                          <p className="mt-2">{note.replace("ASSESSMENT: ", "")}</p>
+                          <Badge className="bg-primary mb-3">Final Assessment</Badge>
+                          <pre className="whitespace-pre-wrap font-sans text-foreground leading-relaxed text-sm">
+                            {note.replace("FINAL ASSESSMENT: ", "")}
+                          </pre>
+                        </div>
+                      ) : isSource ? (
+                        <div>
+                          <Badge variant="outline" className="border-primary text-primary mb-3">
+                            {note.split("\n")[0]}
+                          </Badge>
+                          <pre className="whitespace-pre-wrap font-sans text-foreground/90 leading-relaxed text-xs mt-2">
+                            {note.split("\n").slice(1).join("\n")}
+                          </pre>
                         </div>
                       ) : (
-                        <p>{note}</p>
+                        <pre className="whitespace-pre-wrap font-sans text-foreground leading-relaxed text-sm">
+                          {note}
+                        </pre>
                       )}
                     </div>
                   )

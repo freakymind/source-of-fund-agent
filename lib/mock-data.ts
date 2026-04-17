@@ -1281,35 +1281,90 @@ export function generateAuditReport(
 
   // Generate comprehensive AI-style notes with detailed reasoning
   const notes: string[] = []
+  const fmt = (n: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)
   
-  // Add detailed summary for each funding source
-  fundingSources.forEach((fs) => {
+  // Add detailed summary for each funding source with SPECIFIC data from documents
+  fundingSources.forEach((fs, fsIndex) => {
     const validatedInSource = fs.requiredDocuments.filter(d => d.status === "validated").length
     const totalInSource = fs.requiredDocuments.length
     const allValid = validatedInSource === totalInSource
-    const sourceAmount = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(fs.amount)
+    const flaggedDocs = fs.requiredDocuments.filter(d => d.status === "flagged")
+    const missingDocs = fs.requiredDocuments.filter(d => d.status === "missing")
     
+    // Build detailed per-source analysis
+    let sourceAnalysis = `SOURCE ${fsIndex + 1}: ${fs.description}\n`
+    sourceAnalysis += `Statement Excerpt: "${fs.statementExcerpt}"\n\n`
+    
+    // Add specific findings from each document
+    fs.requiredDocuments.forEach((doc) => {
+      if (doc.validationResult) {
+        sourceAnalysis += `[${doc.name}] - ${doc.status.toUpperCase()}\n`
+        
+        // Add extracted data with specific values
+        if (doc.validationResult.extractedData.length > 0) {
+          sourceAnalysis += `Extracted Data: `
+          sourceAnalysis += doc.validationResult.extractedData.map(d => `${d.label}: ${d.value}`).join(" | ")
+          sourceAnalysis += `\n`
+        }
+        
+        // Add specific match results with actual vs claimed
+        doc.validationResult.matches.forEach((match) => {
+          const icon = match.status === "match" ? "VERIFIED" : match.status === "partial" ? "PARTIAL" : "MISMATCH"
+          sourceAnalysis += `  - [${icon}] Claim: "${match.statementClaim}" → Document shows: "${match.documentEvidence}"`
+          if (match.analysis) {
+            sourceAnalysis += ` (${match.analysis})`
+          }
+          sourceAnalysis += `\n`
+        })
+        
+        // Add plausibility calculations if present
+        if (doc.validationResult.plausibilityAnalysis) {
+          const pa = doc.validationResult.plausibilityAnalysis
+          sourceAnalysis += `  Plausibility: ${pa.conclusion.toUpperCase()} - ${pa.reasoning[0]}\n`
+          if (pa.calculations && pa.calculations.length > 0) {
+            pa.calculations.forEach((calc) => {
+              sourceAnalysis += `    • ${calc.label}: ${calc.formula} = ${calc.result} [${calc.assessment}]\n`
+            })
+          }
+        }
+        
+        // Add flags if any
+        if (doc.validationResult.flags.length > 0) {
+          doc.validationResult.flags.forEach((flag) => {
+            sourceAnalysis += `  ⚠️ FLAG (${flag.severity.toUpperCase()}): ${flag.message}\n`
+            sourceAnalysis += `     Recommendation: ${flag.recommendation}\n`
+          })
+        }
+        
+        sourceAnalysis += `\n`
+      } else if (doc.status === "missing") {
+        sourceAnalysis += `[${doc.name}] - MISSING\n`
+        sourceAnalysis += `  Required to verify: ${doc.checksToPerform.join(", ")}\n\n`
+      }
+    })
+    
+    // Source conclusion
     if (allValid) {
-      notes.push(`${fs.description}: All ${totalInSource} supporting documents have been verified. The claimed amount of ${sourceAmount} is supported by documentary evidence. Statement excerpt "${fs.statementExcerpt.substring(0, 80)}..." has been cross-referenced and confirmed.`)
-    } else {
-      const flagged = fs.requiredDocuments.filter(d => d.status === "flagged")
-      const missing = fs.requiredDocuments.filter(d => d.status === "missing")
-      if (flagged.length > 0) {
-        notes.push(`${fs.description}: ${flagged.length} document(s) flagged - ${flagged.map(d => d.name).join(", ")}. Discrepancies found between statement claims and documentary evidence require manual review.`)
-      }
-      if (missing.length > 0) {
-        notes.push(`${fs.description}: ${missing.length} document(s) still required - ${missing.map(d => d.name).join(", ")}. Cannot fully verify the claimed ${sourceAmount} until all documents are provided.`)
-      }
+      sourceAnalysis += `CONCLUSION: ${fs.description} - FULLY VERIFIED. All ${totalInSource} documents validated. Claimed amount of ${fmt(fs.amount)} is supported by documentary evidence.`
+    } else if (flaggedDocs.length > 0) {
+      sourceAnalysis += `CONCLUSION: ${fs.description} - REQUIRES REVIEW. ${flaggedDocs.length} document(s) flagged with discrepancies. Manual review required before approval.`
+    } else if (missingDocs.length > 0) {
+      sourceAnalysis += `CONCLUSION: ${fs.description} - INCOMPLETE. ${missingDocs.length} required document(s) not yet submitted: ${missingDocs.map(d => d.name).join(", ")}.`
     }
+    
+    notes.push(sourceAnalysis)
   })
   
-  // Add overall assessment
+  // Add overall assessment with specific totals
+  const totalSourcesList = fundingSources.map(fs => `${fs.type.replace("_", " ")}: ${fmt(fs.amount)}`).join(", ")
   if (overallStatus === "approved") {
-    notes.push(`ASSESSMENT: All declared sources of funds totaling ${new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(totalFunds)} have been successfully verified. Documentary evidence supports the applicant's statement. Plausibility analysis confirms the claimed funds are consistent with documented income, savings patterns, and other evidence.`)
+    notes.push(`FINAL ASSESSMENT: Source of Funds verification APPROVED for ${applicantName}.\n\nTotal funds verified: ${fmt(totalFunds)} from ${fundingSources.length} source(s) (${totalSourcesList}).\n\nAll ${totalDocs} supporting documents have been validated. Cross-referencing confirms applicant's statement is consistent with documentary evidence. Plausibility analysis supports the legitimacy of declared funds. No further action required.`)
   } else if (overallStatus === "flagged") {
-    notes.push(`ASSESSMENT: Verification has identified ${flaggedDocs} item(s) requiring further review. While some sources are verified, the flagged items should be addressed before final approval. Recommend requesting additional clarification or documentation for flagged items.`)
+    const flagDetails = allFlags.map(f => `• ${f.message} (${f.severity})`).join("\n")
+    notes.push(`FINAL ASSESSMENT: Source of Funds verification FLAGGED for ${applicantName}.\n\nTotal declared: ${fmt(totalFunds)} from ${fundingSources.length} source(s).\n\n${flaggedDocs} document(s) require manual review:\n${flagDetails}\n\nRecommendation: Request clarification from applicant on flagged items. Consider additional documentation to resolve discrepancies.`)
   } else {
-    notes.push(`ASSESSMENT: Verification incomplete. ${pendingDocs} required document(s) have not been submitted. Full source of funds assessment cannot be completed until all documentation is provided.`)
+    const missingList = fundingSources.flatMap(fs => fs.requiredDocuments.filter(d => d.status === "missing").map(d => d.name)).join(", ")
+    notes.push(`FINAL ASSESSMENT: Source of Funds verification INCOMPLETE for ${applicantName}.\n\nTotal declared: ${fmt(totalFunds)} from ${fundingSources.length} source(s).\n\n${pendingDocs} required document(s) not yet submitted: ${missingList}.\n\nRecommendation: Request outstanding documents from applicant. Verification cannot be completed until all documentation is provided.`)
   }
 
   return {
