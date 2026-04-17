@@ -863,8 +863,8 @@ export default function SOFAgentPage() {
               </Card>
             )}
 
-            {/* Example Cases - Demo Section at Bottom */}
-            <Card>
+            {/* Example Cases - Demo Section at Bottom (Stage 1 only) */}
+            {currentStage === 1 && <Card>
               <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <FileText className="w-5 h-5 text-primary" />
@@ -913,7 +913,7 @@ export default function SOFAgentPage() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
 
           {/* Chat Panel */}
