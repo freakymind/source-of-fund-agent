@@ -919,7 +919,7 @@ export default function SOFAgentPage() {
           </div>
 
           {/* Chat Panel */}
-          <div className="lg:col-span-1 h-[calc(100vh-200px)] min-h-[500px] sticky top-4 print:hidden">
+          <div className="lg:col-span-1 h-[calc(100vh-100px)] sticky top-4 print:hidden">
             <ChatPanel
               messages={chatMessages}
               onSendMessage={handleSendMessage}
