@@ -3,7 +3,9 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { StageIndicator } from "@/components/sof/stage-indicator"
 import { ChatPanel } from "@/components/sof/chat-panel"
+import { StageReport } from "@/components/sof/stage-report"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -650,6 +652,81 @@ export default function SOFAgentPage() {
           {/* Main Workflow Area */}
           <div className="lg:col-span-2 space-y-6" ref={contentRef}>
             
+            {/* Stage 1: Welcome & How It Works */}
+            {currentStage === 1 && !isProcessing && (
+              <Card className="border-2 border-primary/20 overflow-hidden">
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
+                  <h2 className="text-2xl font-bold text-foreground mb-2">Source of Funds Verification</h2>
+                  <p className="text-muted-foreground">
+                    AI-powered document verification for AML/KYC compliance
+                  </p>
+                </div>
+                <CardContent className="pt-6 space-y-6">
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-4">How the AI Agent Works:</h3>
+                    <div className="grid gap-4">
+                      <div className="flex gap-4 items-start p-4 bg-accent/30 rounded-lg border border-border/50">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="font-bold text-primary">1</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Statement Analysis</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            AI reads the applicant&apos;s statement and <span className="bg-yellow-200 px-1 rounded">highlights key claims</span> about 
+                            income sources, amounts, dates, and origins of funds.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 items-start p-4 bg-accent/30 rounded-lg border border-border/50">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="font-bold text-primary">2</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Document Requirements</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Based on identified claims, the system determines <span className="bg-blue-200 px-1 rounded">which documents are needed</span> to 
+                            verify each funding source (payslips, bank statements, gift letters, etc.).
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 items-start p-4 bg-accent/30 rounded-lg border border-border/50">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="font-bold text-primary">3</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Agent Validation</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Specialized agents (Payroll, Banking, Legal, Property) <span className="bg-green-200 px-1 rounded">extract and verify data</span> from 
+                            each document, checking claims match evidence.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 items-start p-4 bg-accent/30 rounded-lg border border-border/50">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="font-bold text-primary">4</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Audit Report</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Final compliance report with <span className="bg-purple-200 px-1 rounded">detailed findings</span>, flags, 
+                            plausibility analysis, and verification status for each source.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-center py-2">
+                    <p className="text-sm text-muted-foreground">
+                      Select an example case below to see the full verification workflow in action.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Processing Steps (shown when processing) */}
             {isProcessing && processingSteps.length > 0 && (
               <Card>
@@ -667,17 +744,74 @@ export default function SOFAgentPage() {
               </Card>
             )}
 
-            {/* Statement Preview (Stage 2+) */}
+            {/* Statement Preview with Highlighted Claims (Stage 2+) */}
             {currentStage >= 2 && statement && (
-              <Card className="border-primary/20">
-                <CardHeader className="py-3 bg-primary/5">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary" />
-                    Applicant Statement
+              <Card className="border-2 border-primary/20 overflow-hidden">
+                <CardHeader className="py-4 bg-gradient-to-r from-primary/10 to-primary/5">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary" />
+                    Applicant Statement - AI Analysis
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="py-3">
-                  <p className="text-sm text-muted-foreground whitespace-pre-line">{statement}</p>
+                <CardContent className="py-4 space-y-4">
+                  {/* The statement with key parts that could be highlighted */}
+                  <div className="p-4 bg-accent/20 rounded-lg border border-border/50">
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{statement}</p>
+                  </div>
+                  
+                  {/* Show what was extracted */}
+                  {fundingSources.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        Key Claims Identified by AI:
+                      </h4>
+                      <div className="grid gap-2">
+                        {fundingSources.map((source) => (
+                          <div key={source.id} className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="outline" className="text-xs border-yellow-600 text-yellow-700 bg-yellow-100">
+                                {source.type.replace("_", " ")}
+                              </Badge>
+                              <span className="font-bold text-foreground">£{source.amount.toLocaleString()}</span>
+                            </div>
+                            <p className="text-sm text-foreground font-medium">{source.description}</p>
+                            <p className="text-xs text-muted-foreground mt-1 italic">&quot;{source.statementExcerpt}&quot;</p>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Document Requirements Summary */}
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-semibold text-sm text-blue-800 mb-3 flex items-center gap-2">
+                          <FileCheck className="w-4 h-4" />
+                          Documents Required for Verification:
+                        </h4>
+                        <div className="space-y-2">
+                          {fundingSources.map((source) => (
+                            <div key={source.id} className="text-sm">
+                              <p className="font-medium text-foreground">{source.description}:</p>
+                              <ul className="ml-4 mt-1 space-y-1">
+                                {source.requiredDocuments.map((doc) => (
+                                  <li key={doc.id} className="flex items-center gap-2 text-muted-foreground">
+                                    {doc.status === "missing" ? (
+                                      <XCircle className="w-3 h-3 text-destructive" />
+                                    ) : doc.status === "validated" ? (
+                                      <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                    ) : (
+                                      <Clock className="w-3 h-3 text-amber-600" />
+                                    )}
+                                    <span>{doc.name}</span>
+                                    <span className="text-xs">- {doc.reason}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -760,107 +894,11 @@ export default function SOFAgentPage() {
 
             {/* Stage 4: Audit Report */}
             {currentStage === 4 && auditReport && (
-              <Card className="print:shadow-none">
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 print:bg-white">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Audit Report</CardTitle>
-                    <div className="flex items-center gap-2 print:hidden">
-                      <Button size="sm" variant="outline" onClick={() => window.print()}>
-                        <Printer className="w-4 h-4 mr-1" />
-                        Print
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Download className="w-4 h-4 mr-1" />
-                        Export
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="py-4 space-y-6">
-                  {/* Summary */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-primary">{auditReport.plausibilityScore}%</p>
-                      <p className="text-xs text-muted-foreground">Plausibility</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-foreground">£{(auditReport.totalFundsVerified / 1000).toFixed(0)}k</p>
-                      <p className="text-xs text-muted-foreground">Verified</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-green-600">{auditReport.validationSummary.validatedDocuments}</p>
-                      <p className="text-xs text-muted-foreground">Validated</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className={cn(
-                        "text-2xl font-bold",
-                        auditReport.validationSummary.flaggedDocuments > 0 ? "text-destructive" : "text-green-600"
-                      )}>
-                        {auditReport.validationSummary.flaggedDocuments}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Flagged</p>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center justify-center p-4 rounded-lg border">
-                    <Badge className={cn(
-                      "text-lg px-4 py-1",
-                      auditReport.overallStatus === "approved" && "bg-green-600",
-                      auditReport.overallStatus === "flagged" && "bg-destructive",
-                      auditReport.overallStatus === "pending" && "bg-amber-600",
-                    )}>
-                      {auditReport.overallStatus.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  {/* Flagged Items */}
-                  {auditReport.flaggedItems.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-destructive" />
-                        Items Requiring Review
-                      </h4>
-                      {auditReport.flaggedItems.map((item, i) => (
-                        <div key={i} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                          <p className="text-sm font-medium text-foreground">{item.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{item.recommendation}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {auditReport.notes && auditReport.notes.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Analyst Notes</h4>
-                      <ul className="space-y-1">
-                        {auditReport.notes.map((note, i) => (
-                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            {note}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Audit Trail */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Audit Trail</h4>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      {auditReport.auditTrail.map((item, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="text-muted-foreground/60">
-                            {new Date(item.timestamp).toLocaleTimeString()}
-                          </span>
-                          <span>{item.action}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StageReport 
+                report={auditReport}
+                onExportPDF={() => window.print()}
+                onPrint={() => window.print()}
+              />
             )}
 
             {/* Example Cases - Demo Section at Bottom (Stage 1 only) */}
