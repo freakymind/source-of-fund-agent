@@ -296,7 +296,7 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                                   <span className="font-medium">For:</span> {source.description}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  <span className="font-medium">Required to verify:</span> {doc.checksToPerform?.join(", ") || doc.reason}
+                                  <span className="font-medium">Required to verify:</span> {doc.whatWillBeChecked?.join(", ") || doc.reason}
                                 </p>
                               </div>
                             </div>

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { StageIndicator } from "@/components/sof/stage-indicator"
 import { ChatPanel } from "@/components/sof/chat-panel"
+import { StageReport } from "@/components/sof/stage-report"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -893,107 +894,11 @@ export default function SOFAgentPage() {
 
             {/* Stage 4: Audit Report */}
             {currentStage === 4 && auditReport && (
-              <Card className="print:shadow-none">
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 print:bg-white">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Audit Report</CardTitle>
-                    <div className="flex items-center gap-2 print:hidden">
-                      <Button size="sm" variant="outline" onClick={() => window.print()}>
-                        <Printer className="w-4 h-4 mr-1" />
-                        Print
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Download className="w-4 h-4 mr-1" />
-                        Export
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="py-4 space-y-6">
-                  {/* Summary */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-primary">{auditReport.plausibilityScore}%</p>
-                      <p className="text-xs text-muted-foreground">Plausibility</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-foreground">£{(auditReport.totalFundsVerified / 1000).toFixed(0)}k</p>
-                      <p className="text-xs text-muted-foreground">Verified</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className="text-2xl font-bold text-green-600">{auditReport.validationSummary.validatedDocuments}</p>
-                      <p className="text-xs text-muted-foreground">Validated</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-accent/30">
-                      <p className={cn(
-                        "text-2xl font-bold",
-                        auditReport.validationSummary.flaggedDocuments > 0 ? "text-destructive" : "text-green-600"
-                      )}>
-                        {auditReport.validationSummary.flaggedDocuments}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Flagged</p>
-                    </div>
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex items-center justify-center p-4 rounded-lg border">
-                    <Badge className={cn(
-                      "text-lg px-4 py-1",
-                      auditReport.overallStatus === "approved" && "bg-green-600",
-                      auditReport.overallStatus === "flagged" && "bg-destructive",
-                      auditReport.overallStatus === "pending" && "bg-amber-600",
-                    )}>
-                      {auditReport.overallStatus.toUpperCase()}
-                    </Badge>
-                  </div>
-
-                  {/* Flagged Items */}
-                  {auditReport.flaggedItems.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-destructive" />
-                        Items Requiring Review
-                      </h4>
-                      {auditReport.flaggedItems.map((item, i) => (
-                        <div key={i} className="p-3 rounded-lg border border-destructive/20 bg-destructive/5">
-                          <p className="text-sm font-medium text-foreground">{item.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{item.recommendation}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {auditReport.notes && auditReport.notes.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Analyst Notes</h4>
-                      <ul className="space-y-1">
-                        {auditReport.notes.map((note, i) => (
-                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                            <span className="text-primary">•</span>
-                            {note}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Audit Trail */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Audit Trail</h4>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      {auditReport.auditTrail.map((item, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="text-muted-foreground/60">
-                            {new Date(item.timestamp).toLocaleTimeString()}
-                          </span>
-                          <span>{item.action}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StageReport 
+                report={auditReport}
+                onExportPDF={() => window.print()}
+                onPrint={() => window.print()}
+              />
             )}
 
             {/* Example Cases - Demo Section at Bottom (Stage 1 only) */}
