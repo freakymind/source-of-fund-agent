@@ -317,23 +317,106 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </Card>
           )}
 
-          {/* Detailed Findings by Funding Source */}
-          <Card className="p-4">
-            <h3 className="font-semibold mb-4 text-foreground">Detailed Findings by Funding Source</h3>
-            <div className="space-y-6">
-              {report.fundingSources.map((source) => (
-                <div key={source.id} className="border border-border/50 rounded-lg overflow-hidden">
-                  {/* Source Header */}
-                  <div className="flex items-center justify-between p-4 bg-accent/30">
-                    <div>
-                      <p className="font-medium text-foreground">{source.description}</p>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        Type: {source.type.replace("_", " ")} | Amount: {formatCurrency(source.amount)}
+          {/* Key Findings at a Glance */}
+          <Card className="p-5 border-2 border-primary/20 bg-gradient-to-br from-white to-accent/10">
+            <h3 className="font-bold text-lg mb-5 flex items-center gap-2 text-foreground">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Key Findings at a Glance
+            </h3>
+            <div className="grid gap-4">
+              {report.fundingSources.map((source) => {
+                const allVerified = source.requiredDocuments.every((d) => d.status === "validated")
+                const hasFlags = source.requiredDocuments.some((d) => d.status === "flagged")
+                const hasMissing = source.requiredDocuments.some((d) => d.status === "missing")
+                
+                return (
+                  <div 
+                    key={source.id} 
+                    className={cn(
+                      "p-4 rounded-xl border-2 flex items-center gap-4",
+                      allVerified && "bg-success/5 border-success/30",
+                      hasFlags && "bg-destructive/5 border-destructive/30",
+                      hasMissing && !hasFlags && "bg-warning/5 border-warning/30"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
+                      allVerified && "bg-success/20",
+                      hasFlags && "bg-destructive/20",
+                      hasMissing && !hasFlags && "bg-warning/20"
+                    )}>
+                      {allVerified ? (
+                        <CheckCircle2 className="w-7 h-7 text-success" />
+                      ) : hasFlags ? (
+                        <AlertTriangle className="w-7 h-7 text-destructive" />
+                      ) : (
+                        <Clock className="w-7 h-7 text-warning" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {source.type.replace("_", " ")}
+                        </Badge>
+                        <Badge className={cn(
+                          "text-xs",
+                          allVerified && "bg-success",
+                          hasFlags && "bg-destructive",
+                          hasMissing && !hasFlags && "bg-warning"
+                        )}>
+                          {allVerified ? "VERIFIED" : hasFlags ? "FLAGGED" : "PENDING"}
+                        </Badge>
+                      </div>
+                      <p className="font-semibold text-foreground truncate">{source.description}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {source.requiredDocuments.filter((d) => d.status === "validated").length} of {source.requiredDocuments.length} documents verified
                       </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-2xl font-bold text-foreground">{formatCurrency(source.amount)}</p>
+                      <p className="text-xs text-muted-foreground">Claimed Amount</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* Detailed Findings by Funding Source */}
+          <Card className="p-5 border-2 border-border/50">
+            <h3 className="font-bold text-lg mb-5 flex items-center gap-2 text-foreground">
+              <FileText className="w-5 h-5 text-primary" />
+              Detailed Verification Results
+            </h3>
+            <div className="space-y-6">
+              {report.fundingSources.map((source, sourceIndex) => (
+                <div key={source.id} className="border-2 border-border/30 rounded-xl overflow-hidden">
+                  {/* Source Header */}
+                  <div className={cn(
+                    "flex items-center justify-between p-5",
+                    source.requiredDocuments.every((d) => d.status === "validated")
+                      ? "bg-success/10"
+                      : source.requiredDocuments.some((d) => d.status === "flagged")
+                        ? "bg-destructive/10"
+                        : "bg-warning/10"
+                  )}>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="font-bold text-primary">{sourceIndex + 1}</span>
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg text-foreground">{source.description}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {source.type.replace("_", " ")}
+                          </Badge>
+                          <span className="text-sm font-semibold text-primary">{formatCurrency(source.amount)}</span>
+                        </div>
+                      </div>
                     </div>
                     <Badge
                       className={cn(
-                        "text-xs",
+                        "text-sm px-4 py-1",
                         source.requiredDocuments.every((d) => d.status === "validated")
                           ? "bg-success"
                           : source.requiredDocuments.some((d) => d.status === "flagged")
@@ -342,30 +425,50 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                       )}
                     >
                       {source.requiredDocuments.filter((d) => d.status === "validated").length}/
-                      {source.requiredDocuments.length} verified
+                      {source.requiredDocuments.length} Verified
                     </Badge>
                   </div>
                   
                   {/* Statement Excerpt */}
-                  <div className="p-3 bg-primary/5 border-b border-border/50">
-                    <p className="text-xs font-semibold text-primary mb-1">Applicant Stated:</p>
-                    <p className="text-sm text-foreground italic">&quot;{source.statementExcerpt}&quot;</p>
+                  <div className="p-4 bg-yellow-50 border-y border-yellow-200">
+                    <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-2">Applicant&apos;s Statement</p>
+                    <p className="text-sm text-foreground italic leading-relaxed">&quot;{source.statementExcerpt}&quot;</p>
                   </div>
                   
                   {/* Document Findings */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-5 space-y-4 bg-white">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Document Analysis</p>
                     {source.requiredDocuments.map((doc) => (
-                      <div key={doc.id} className="p-3 bg-background rounded border border-border/30">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium text-foreground text-sm">{doc.name}</p>
+                      <div 
+                        key={doc.id} 
+                        className={cn(
+                          "p-4 rounded-lg border-2",
+                          doc.status === "validated" && "bg-success/5 border-success/20",
+                          doc.status === "flagged" && "bg-destructive/5 border-destructive/20",
+                          doc.status === "missing" && "bg-muted/30 border-muted",
+                          doc.status === "uploaded" && "bg-accent/30 border-border/50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {doc.status === "validated" ? (
+                              <CheckCircle2 className="w-5 h-5 text-success" />
+                            ) : doc.status === "flagged" ? (
+                              <AlertTriangle className="w-5 h-5 text-destructive" />
+                            ) : doc.status === "missing" ? (
+                              <Clock className="w-5 h-5 text-muted-foreground" />
+                            ) : (
+                              <FileText className="w-5 h-5 text-primary" />
+                            )}
+                            <p className="font-semibold text-foreground">{doc.name}</p>
+                          </div>
                           <Badge
-                            variant="outline"
                             className={cn(
                               "text-xs",
-                              doc.status === "validated" && "border-success text-success",
-                              doc.status === "flagged" && "border-destructive text-destructive",
-                              doc.status === "uploaded" && "border-info text-info",
-                              doc.status === "missing" && "border-muted-foreground text-muted-foreground"
+                              doc.status === "validated" && "bg-success",
+                              doc.status === "flagged" && "bg-destructive",
+                              doc.status === "missing" && "bg-muted text-muted-foreground",
+                              doc.status === "uploaded" && "bg-primary"
                             )}
                           >
                             {doc.status.toUpperCase()}
@@ -373,46 +476,91 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
                         </div>
                         
                         {doc.validationResult && (
-                          <div className="space-y-2 mt-2">
-                            <p className="text-xs text-muted-foreground">
-                              <strong>Checks Performed:</strong>
-                            </p>
-                            <ul className="text-xs text-muted-foreground space-y-1 ml-2">
-                              {doc.validationResult.matches.map((match, i) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  {match.status === "match" ? (
-                                    <CheckCircle2 className="w-3 h-3 text-success mt-0.5 flex-shrink-0" />
-                                  ) : match.status === "partial" ? (
-                                    <AlertTriangle className="w-3 h-3 text-warning mt-0.5 flex-shrink-0" />
-                                  ) : (
-                                    <AlertTriangle className="w-3 h-3 text-destructive mt-0.5 flex-shrink-0" />
-                                  )}
-                                  <span>
-                                    {match.statementClaim}: {match.documentEvidence}
-                                    {match.analysis && <span className="italic text-muted-foreground/70"> ({match.analysis})</span>}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                            {doc.validationResult.plausibilityAnalysis && (
-                              <div className="mt-2 pt-2 border-t border-border/30">
-                                <p className="text-xs text-muted-foreground">
-                                  <strong>Plausibility:</strong>{" "}
-                                  <span className={cn(
-                                    doc.validationResult.plausibilityAnalysis.conclusion === "plausible" && "text-success",
-                                    doc.validationResult.plausibilityAnalysis.conclusion === "questionable" && "text-warning",
-                                    doc.validationResult.plausibilityAnalysis.conclusion === "implausible" && "text-destructive"
-                                  )}>
-                                    {doc.validationResult.plausibilityAnalysis.conclusion.toUpperCase()}
-                                  </span>
-                                  {" - "}
-                                  {doc.validationResult.plausibilityAnalysis.reasoning[0]}
-                                </p>
+                          <div className="space-y-3">
+                            {/* Extracted Data Highlight */}
+                            {doc.validationResult.extractedData && doc.validationResult.extractedData.length > 0 && (
+                              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Key Data Extracted</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {doc.validationResult.extractedData.map((data, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-sm">
+                                      <span className="text-muted-foreground">{data.label}:</span>
+                                      <span className="font-semibold text-foreground">{data.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            <p className="text-xs text-foreground mt-2 p-2 bg-accent/30 rounded">
-                              <strong>Summary:</strong> {doc.validationResult.summary}
-                            </p>
+
+                            {/* Verification Checks */}
+                            <div className="space-y-2">
+                              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Verification Checks</p>
+                              <div className="space-y-1.5">
+                                {doc.validationResult.matches.map((match, i) => (
+                                  <div 
+                                    key={i} 
+                                    className={cn(
+                                      "flex items-start gap-3 p-2.5 rounded-lg text-sm",
+                                      match.status === "match" && "bg-success/10",
+                                      match.status === "partial" && "bg-warning/10",
+                                      match.status === "mismatch" && "bg-destructive/10"
+                                    )}
+                                  >
+                                    {match.status === "match" ? (
+                                      <CheckCircle2 className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                                    ) : match.status === "partial" ? (
+                                      <AlertTriangle className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+                                    ) : (
+                                      <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1">
+                                      <p className="font-medium text-foreground">{match.statementClaim}</p>
+                                      <p className="text-muted-foreground text-xs mt-0.5">
+                                        Document shows: <span className="font-medium text-foreground">{match.documentEvidence}</span>
+                                      </p>
+                                      {match.analysis && (
+                                        <p className="text-xs italic text-muted-foreground mt-1">{match.analysis}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Plausibility */}
+                            {doc.validationResult.plausibilityAnalysis && (
+                              <div className={cn(
+                                "p-3 rounded-lg border",
+                                doc.validationResult.plausibilityAnalysis.conclusion === "plausible" && "bg-success/5 border-success/30",
+                                doc.validationResult.plausibilityAnalysis.conclusion === "questionable" && "bg-warning/5 border-warning/30",
+                                doc.validationResult.plausibilityAnalysis.conclusion === "implausible" && "bg-destructive/5 border-destructive/30"
+                              )}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Plausibility:</span>
+                                  <Badge className={cn(
+                                    "text-xs",
+                                    doc.validationResult.plausibilityAnalysis.conclusion === "plausible" && "bg-success",
+                                    doc.validationResult.plausibilityAnalysis.conclusion === "questionable" && "bg-warning",
+                                    doc.validationResult.plausibilityAnalysis.conclusion === "implausible" && "bg-destructive"
+                                  )}>
+                                    {doc.validationResult.plausibilityAnalysis.conclusion.toUpperCase()}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-foreground">{doc.validationResult.plausibilityAnalysis.reasoning[0]}</p>
+                              </div>
+                            )}
+
+                            {/* Summary */}
+                            <div className="p-3 bg-accent/50 rounded-lg">
+                              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Summary</p>
+                              <p className="text-sm text-foreground">{doc.validationResult.summary}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {doc.status === "missing" && (
+                          <div className="p-3 bg-warning/10 rounded-lg border border-warning/30 mt-2">
+                            <p className="text-sm text-warning font-medium">This document is required to verify: {doc.reason}</p>
                           </div>
                         )}
                       </div>
@@ -423,34 +571,45 @@ export function StageReport({ report, onExportPDF, onPrint }: StageReportProps) 
             </div>
           </Card>
 
-          {/* Flagged Items */}
+          {/* Flagged Items - Action Required */}
           {report.flaggedItems.length > 0 && (
-            <Card className="p-4 border-destructive/30 bg-destructive/5">
-              <h3 className="font-semibold mb-4 flex items-center gap-2 text-destructive">
-                <AlertTriangle className="w-5 h-5" />
-                Items Requiring Review
-              </h3>
-              <div className="space-y-3">
-                {report.flaggedItems.map((item, i) => (
-                  <div key={i} className="p-3 bg-background rounded border border-destructive/20">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        className={cn(
-                          "text-xs",
-                          item.severity === "high" && "bg-destructive",
-                          item.severity === "medium" && "bg-warning",
-                          item.severity === "low" && "bg-info"
-                        )}
-                      >
-                        {item.severity.toUpperCase()}
-                      </Badge>
-                      <span className="font-medium text-foreground">{item.message}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground pl-2">
-                      Recommendation: {item.recommendation}
-                    </p>
+            <Card className="p-5 border-2 border-destructive/40 bg-gradient-to-br from-destructive/10 to-destructive/5 overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-destructive/20 flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-destructive" />
                   </div>
-                ))}
+                  <div>
+                    <h3 className="font-bold text-lg text-destructive">Action Required</h3>
+                    <p className="text-sm text-muted-foreground">{report.flaggedItems.length} item(s) require analyst review</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {report.flaggedItems.map((item, i) => (
+                    <div key={i} className="p-4 bg-white rounded-xl border-2 border-destructive/20 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <Badge
+                          className={cn(
+                            "text-xs mt-0.5 flex-shrink-0",
+                            item.severity === "high" && "bg-destructive",
+                            item.severity === "medium" && "bg-warning",
+                            item.severity === "low" && "bg-info"
+                          )}
+                        >
+                          {item.severity.toUpperCase()}
+                        </Badge>
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground mb-2">{item.message}</p>
+                          <div className="p-2 bg-primary/5 rounded border border-primary/20">
+                            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Recommended Action</p>
+                            <p className="text-sm text-foreground">{item.recommendation}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </Card>
           )}
