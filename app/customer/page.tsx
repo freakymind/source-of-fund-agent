@@ -199,10 +199,24 @@ export default function CustomerJourneyPage() {
               <p className="text-xs text-primary-foreground/70">Secure document verification portal</p>
             </div>
           </div>
-          <Badge variant="outline" className="border-white/30 text-white text-xs">
-            <Clock className="w-3 h-3 mr-1" />
-            ~5 minutes
-          </Badge>
+          <div className="flex items-center gap-3">
+            {/* View Switcher */}
+            <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
+              <a 
+                href="/" 
+                className="px-3 py-1.5 text-sm font-medium text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/10 rounded-md transition-colors"
+              >
+                Analyst View
+              </a>
+              <div className="px-3 py-1.5 text-sm font-medium bg-white text-primary rounded-md">
+                Customer View
+              </div>
+            </div>
+            <Badge variant="outline" className="border-white/30 text-white text-xs">
+              <Clock className="w-3 h-3 mr-1" />
+              ~5 minutes
+            </Badge>
+          </div>
         </div>
       </header>
 
