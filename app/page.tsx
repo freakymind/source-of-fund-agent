@@ -629,11 +629,25 @@ export default function SOFAgentPage() {
                 <p className="text-xs text-muted-foreground">AML/KYC Compliance Verification</p>
               </div>
             </div>
-            {selectedCaseId && (
-              <Badge variant="secondary" className="text-xs">
-                {EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.name}
-              </Badge>
-            )}
+            <div className="flex items-center gap-4">
+              {selectedCaseId && (
+                <Badge variant="secondary" className="text-xs">
+                  {EXAMPLE_CASES.find(c => c.id === selectedCaseId)?.name}
+                </Badge>
+              )}
+              {/* View Switcher */}
+              <div className="flex items-center gap-1 bg-accent/50 rounded-lg p-1">
+                <div className="px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-md">
+                  Analyst View
+                </div>
+                <a 
+                  href="/customer" 
+                  className="px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                >
+                  Customer View
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </header>
